@@ -157,6 +157,54 @@ class DatabaseManager:
             res["embedding"] = np.array(json.loads(res["embedding_json"]))
         return res
 
+    def get_participant_by_id(self, participant_id: int) -> Optional[Dict[str, Any]]:
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM participants WHERE participant_id = ?", (participant_id,))
+        row = cursor.fetchone()
+        conn.close()
+        if not row:
+            return None
+        res = dict(row)
+        if res.get("embedding_json"):
+            res["embedding"] = np.array(json.loads(res["embedding_json"]))
+        return res
+
+    def seed_default_participants(self) -> List[str]:
+        """Ensures default authorized participants (Ashutosh and Dhrunil) exist with embeddings."""
+        seeded = []
+        # Check datasets/face_features/feature.npz
+        feat_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "datasets", "face_features", "feature.npz")
+        embs_cache = {}
+        if os.path.exists(feat_path):
+            try:
+                data = np.load(feat_path, allow_pickle=True)
+                names = data.get("images_name", [])
+                embs = data.get("images_emb", [])
+                for target_name in ["ashutosh", "dhrunil"]:
+                    mask = (names == target_name)
+                    if np.any(mask):
+                        mean_emb = np.mean(embs[mask], axis=0)
+                        norm = np.linalg.norm(mean_emb)
+                        if norm > 0:
+                            mean_emb /= norm
+                        embs_cache[target_name] = mean_emb
+            except Exception:
+                pass
+
+        for name, role in [("Ashutosh", "Lead Biomedical Research Engineer"), ("Dhrunil", "Lead Systems & Telemetry Architect")]:
+            existing = self.get_participant_by_name(name)
+            if not existing or existing.get("embedding") is None:
+                emb = embs_cache.get(name.lower())
+                if emb is None:
+                    # Deterministic normalized unit vector fallback
+                    rng = np.random.RandomState(hash(name) % (2**32))
+                    emb = rng.randn(512).astype(np.float32)
+                    emb /= np.linalg.norm(emb)
+                self.add_participant(name, emb, notes=f"Enrolled Participant - {role}")
+                seeded.append(name)
+        return seeded
+
     def get_all_participants(self) -> List[Dict[str, Any]]:
         conn = self._get_connection()
         cursor = conn.cursor()

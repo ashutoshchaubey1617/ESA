@@ -1,135 +1,132 @@
 /* ==========================================================================
-   ESA Clinical Multimodal Telemetry - Dark Medical Tech Design System
+   ESA Multimodal Telemetry & Biometrics - Apple Health / Airbnb Light Design System
+   Pristine Light (#F8FAFC / #FFFFFF), Bento Grid, Apple Watch ECG Oscilloscope,
+   and Apple Face ID Authentication Gate.
+   Strictly adheres to ui-ux-pro-max guidelines for Apple/Airbnb clean aesthetics.
    ========================================================================== */
 
 :root {
-  --bg-app: #06080e;
-  --bg-sidebar: #090d16;
-  --bg-card: rgba(13, 19, 32, 0.85);
-  --bg-card-hover: rgba(19, 28, 48, 0.9);
-  --bg-glass: rgba(15, 23, 42, 0.65);
+  /* Apple Health / Airbnb Light Theme Palette */
+  --bg-app: #f8fafc;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #ffffff;
+  --bg-card-solid: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.88);
   
-  --border-subtle: rgba(56, 189, 248, 0.12);
-  --border-bright: rgba(56, 189, 248, 0.35);
-  --border-glow: rgba(0, 255, 136, 0.4);
+  /* Apple Slate Borders */
+  --border-subtle: #e2e8f0;
+  --border-medium: #cbd5e1;
+  --border-bright: #94a3b8;
 
-  --color-ecg: #00ff88;
-  --color-ecg-glow: rgba(0, 255, 136, 0.5);
-  --color-ppg-ir: #00f0ff;
-  --color-ppg-ir-glow: rgba(0, 240, 255, 0.5);
-  --color-ppg-red: #ff3366;
-  --color-ppg-red-glow: rgba(255, 51, 102, 0.5);
-  --color-spo2: #38bdf8;
-  --color-bp: #a855f7;
+  /* Human Interface Accents - Strictly Clean Apple Palette */
+  --color-apple-blue: #2563eb;
+  --color-apple-blue-hover: #1d4ed8;
+  --color-apple-emerald: #059669;
+  --color-apple-amber: #d97706;
+  --color-apple-coral: #e11d48;
+  --color-apple-purple: #7c3aed;
   
-  --color-alarm: #ef4444;
-  --color-alarm-bg: rgba(239, 68, 68, 0.15);
-  --color-warning: #f59e0b;
-  --color-warning-bg: rgba(245, 158, 11, 0.15);
-  --color-success: #10b981;
-  --color-success-bg: rgba(16, 185, 129, 0.15);
+  /* Typography Scale */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #64748b;
   
-  --font-hud: "Exo", "Segoe UI", -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", "Roboto Mono", monospace;
+  /* Modern Clean Typography: SF Pro / Inter */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* Smooth Easing Functions */
+  --ease-apple: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Base Body & Reset */
+* {
+  box-sizing: border-box;
+}
+
 body {
   background-color: var(--bg-app);
-  color: #e2e8f0;
-  font-family: var(--font-hud);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
   overflow-x: hidden;
+  letter-spacing: -0.01em;
   background-image: 
-    radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.05) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(0, 255, 136, 0.04) 0%, transparent 40%);
+    radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.04) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(5, 150, 105, 0.03) 0%, transparent 45%);
   background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbars */
+/* Custom Refined Minimal Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(56, 189, 248, 0.25);
-  border-radius: 3px;
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(56, 189, 248, 0.5);
+  background: rgba(148, 163, 184, 0.5);
 }
 
-/* Glassmorphic Panels */
+/* Bento Grid Cards (rounded-2xl, subtle border, soft Airbnb shadow) */
 .glass-panel {
   background: var(--bg-card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  border-radius: 20px;
+  box-shadow: 0 2px 10px -1px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.02);
+  transition: transform 0.25s var(--ease-apple), border-color 0.25s var(--ease-apple), box-shadow 0.25s var(--ease-apple);
 }
 
 .glass-panel:hover {
-  border-color: var(--border-bright);
+  border-color: var(--border-medium);
+  box-shadow: 0 8px 24px -2px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(0, 0, 0, 0.03);
 }
 
-.glass-panel-glow {
-  box-shadow: 0 0 20px -5px rgba(0, 255, 136, 0.15);
-}
-
-/* Monospace Numbers */
+/* Monospace Numbers & Metrics */
 .hud-mono {
   font-family: var(--font-mono);
-  letter-spacing: -0.02em;
+  font-feature-settings: "tnum" on, "zero" on;
+  letter-spacing: -0.03em;
 }
 
-/* Oscilloscope Screen Bezel */
+/* Apple Watch ECG Oscilloscope Bezel - Clean Dark Monitor Viewport Inside Light Bento Card */
 .scope-bezel {
   position: relative;
-  background: #080c14;
-  border: 2px solid #1e293b;
-  border-radius: 10px;
+  background: #0b0f17;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 18px;
   overflow: hidden;
-  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8), 0 4px 20px rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
-.scope-bezel::after {
-  content: " ";
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(
-    rgba(18, 16, 16, 0) 50%, 
-    rgba(0, 0, 0, 0.25) 50%
-  );
-  background-size: 100% 4px;
-  z-index: 5;
-  pointer-events: none;
-  opacity: 0.45;
-}
-
+/* Clean anti-aliased canvas */
 .scope-canvas {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-/* Cardiac R-Peak Heartbeat Animation */
-@keyframes heart-thump {
-  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
-  15% { transform: scale(1.35); filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.9)); }
-  30% { transform: scale(1.1); filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.5)); }
-  45% { transform: scale(1.25); filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.7)); }
-  70% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
+/* Smooth Cardiac R-Peak Thump */
+@keyframes apple-heart-thump {
+  0% { transform: scale(1); }
+  20% { transform: scale(1.22); }
+  40% { transform: scale(1.08); }
+  60% { transform: scale(1.15); }
   100% { transform: scale(1); }
 }
 
 .animate-heartbeat {
-  animation: heart-thump 0.75s ease-in-out;
+  animation: apple-heart-thump 0.6s var(--ease-apple);
 }
 
-/* Pulsing Status Rings */
+/* Status Dot Pulse */
 .status-dot-pulse {
   position: relative;
 }
@@ -141,64 +138,64 @@ body {
   top: 0;
   left: 0;
   border-radius: 50%;
-  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-  opacity: 0.75;
+  animation: apple-pulse 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  opacity: 0.6;
 }
 
-@keyframes ping {
-  75%, 100% {
+@keyframes apple-pulse {
+  70%, 100% {
     transform: scale(2.2);
     opacity: 0;
   }
 }
 
-/* Active Nav Item */
+/* Navigation Item: Airbnb / Apple Pill style */
+.nav-item {
+  border-radius: 12px;
+  color: #475569;
+  transition: all 0.2s var(--ease-apple);
+}
+.nav-item:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
 .nav-item.active {
-  background: linear-gradient(90deg, rgba(56, 189, 248, 0.2) 0%, rgba(56, 189, 248, 0.04) 100%);
-  border-left: 3px solid #38bdf8;
-  color: #38bdf8;
+  background: #eff6ff;
+  color: #2563eb;
   font-weight: 600;
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.18);
 }
 
-/* Custom Range Sliders */
+/* Apple Range Sliders */
 input[type="range"] {
   -webkit-appearance: none;
   width: 100%;
-  height: 6px;
-  background: #1e293b;
-  border-radius: 3px;
+  height: 5px;
+  background: #e2e8f0;
+  border-radius: 9999px;
   outline: none;
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  background: #38bdf8;
-  border: 2px solid #0f172a;
+  width: 18px;
+  height: 18px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.15);
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.7);
-  transition: transform 0.15s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.18);
+  transition: transform 0.15s var(--ease-apple);
 }
 input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+  transform: scale(1.15);
 }
 
-/* Medical Toggle Switch */
-.toggle-checkbox:checked {
-  right: 0;
-  border-color: #10b981;
-}
-.toggle-checkbox:checked + .toggle-label {
-  background-color: #10b981;
-}
-
-/* Video Face Overlay Container */
+/* Webcam Container & Overlay */
 .webcam-box {
   position: relative;
   background: #090d16;
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
+  border-radius: 18px;
   overflow: hidden;
 }
 
@@ -206,7 +203,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: scaleX(-1); /* Mirror camera for natural feel */
+  transform: scaleX(-1);
 }
 
 .webcam-overlay {
@@ -219,26 +216,226 @@ input[type="range"]::-webkit-slider-thumb:hover {
   z-index: 10;
 }
 
-/* Face Target Reticle Corners */
+/* Apple-style Corner Reticle Brackets */
 .corner-bracket {
   position: absolute;
-  width: 16px;
-  height: 16px;
-  border-color: #00ff88;
+  width: 14px;
+  height: 14px;
+  border-color: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+  transition: border-color 0.3s ease;
+}
+.corner-tl { top: 14px; left: 14px; border-top: 2px solid; border-left: 2px solid; border-top-left-radius: 6px; }
+.corner-tr { top: 14px; right: 14px; border-top: 2px solid; border-right: 2px solid; border-top-right-radius: 6px; }
+.corner-bl { bottom: 14px; left: 14px; border-bottom: 2px solid; border-left: 2px solid; border-bottom-left-radius: 6px; }
+.corner-br { bottom: 14px; right: 14px; border-bottom: 2px solid; border-right: 2px solid; border-bottom-right-radius: 6px; }
+
+/* ==========================================================================
+   APPLE FACE ID LOGIN GATE MODAL & BIOMETRIC FLOW (LIGHT THEME)
+   ========================================================================== */
+
+#faceid-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  transition: opacity 0.5s var(--ease-apple), transform 0.5s var(--ease-apple), visibility 0.5s;
+  padding: 1.5rem;
+}
+
+#faceid-modal.authenticated {
+  opacity: 0;
+  transform: scale(1.03);
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.faceid-card {
+  width: 100%;
+  max-width: 480px;
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 28px;
+  box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Face ID Camera Aperture */
+.faceid-aperture {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto;
+  border-radius: 9999px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.15), 0 0 0 2px rgba(37, 99, 235, 0.15);
+  background: #000000;
+}
+
+.faceid-webcam {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.faceid-overlay {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
 }
-.corner-tl { top: 12px; left: 12px; border-top: 2px solid; border-left: 2px solid; }
-.corner-tr { top: 12px; right: 12px; border-top: 2px solid; border-right: 2px solid; }
-.corner-bl { bottom: 12px; left: 12px; border-bottom: 2px solid; border-left: 2px solid; }
-.corner-br { bottom: 12px; right: 12px; border-bottom: 2px solid; border-right: 2px solid; }
 
-/* Print Styles for Clinical Reports */
+/* Apple Face ID Circular Scanner Ring */
+.faceid-reticle-ring {
+  position: absolute;
+  inset: 4px;
+  border-radius: 9999px;
+  border: 2px dashed rgba(37, 99, 235, 0.4);
+  pointer-events: none;
+  animation: faceid-rotate 16s linear infinite;
+  transition: border-color 0.3s ease;
+}
+
+.faceid-reticle-ring.scanning {
+  border-color: rgba(37, 99, 235, 0.8);
+  animation-duration: 6s;
+}
+
+.faceid-reticle-ring.verified {
+  border-style: solid;
+  border-color: #059669;
+}
+
+.faceid-reticle-ring.restricted {
+  border-style: solid;
+  border-color: #e11d48;
+}
+
+@keyframes faceid-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Ambient Pulse Behind Camera */
+.faceid-ambient-glow {
+  position: absolute;
+  inset: -15px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+  animation: faceid-glow-pulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes faceid-glow-pulse {
+  0% { transform: scale(0.95); opacity: 0.5; }
+  100% { transform: scale(1.05); opacity: 0.85; }
+}
+
+/* SVG Circular Progress Ring */
+.progress-ring-circle {
+  transition: stroke-dashoffset 0.1s linear, stroke 0.3s ease;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+/* Access Warning Card (Apple Clean Alert in Light Mode) */
+.apple-alert-restricted {
+  background: #fef2f2;
+  border: 1px solid #fecdd3;
+  color: #9f1239;
+  border-radius: 16px;
+  padding: 0.85rem 1rem;
+  font-size: 0.775rem;
+  line-height: 1.4;
+  animation: apple-shake 0.4s var(--ease-apple);
+}
+
+@keyframes apple-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+/* Apple Verified Success Badge */
+.apple-verified-badge {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  border-radius: 9999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Micro-interaction Button Styles */
+.apple-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 12px;
+  font-weight: 500;
+  transition: all 0.2s var(--ease-apple);
+  cursor: pointer;
+}
+.apple-btn:hover {
+  transform: translateY(-1px);
+}
+.apple-btn:active {
+  transform: translateY(0);
+}
+
+.apple-btn-primary {
+  background: #2563eb;
+  color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+.apple-btn-primary:hover {
+  background: #1d4ed8;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.apple-btn-secondary {
+  background: #f1f5f9;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+}
+.apple-btn-secondary:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Form Controls in Light Theme */
+input[type="text"], select {
+  background-color: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+input[type="text"]:focus, select:focus {
+  border-color: #2563eb !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+}
+
+/* Print Styles for Clinical Telemetry Reports */
 @media print {
   body {
     background: #ffffff !important;
     color: #000000 !important;
   }
-  aside, #nav-sidebar, .no-print {
+  aside, #nav-sidebar, #faceid-modal, .no-print {
     display: none !important;
   }
   main {

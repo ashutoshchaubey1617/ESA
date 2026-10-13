@@ -18,7 +18,7 @@ from fastapi.testclient import TestClient
 import numpy as np
 import pytest
 
-from server import app, state
+from server import app, state, compute_biomedical_metrics
 
 
 @pytest.fixture(scope="module")
@@ -373,3 +373,132 @@ def test_data_export_timeseries_and_metrics_csv(client: TestClient):
 
     # Cleanup
     state.db.delete_session(export_sess_id)
+
+
+# ============================================================================
+# 8. Biometric Authentication & Physiological Gating Endpoints
+# ============================================================================
+
+def test_startup_faceservice_loads_ashutosh_and_dhrunil(client: TestClient):
+    """Verifies FaceService automatically loads Ashutosh and Dhrunil into memory from database on startup."""
+    known_names_lower = [name.lower() for name in state.face_srv.known_names]
+    assert "ashutosh" in known_names_lower, f"Ashutosh missing from FaceService: {state.face_srv.known_names}"
+    assert "dhrunil" in known_names_lower, f"Dhrunil missing from FaceService: {state.face_srv.known_names}"
+    assert state.face_srv.known_embeddings is not None
+    assert len(state.face_srv.known_embeddings) >= 2
+
+
+def test_startup_blood_pressure_model_loaded(client: TestClient):
+    """Verifies BloodPressureModel automatically loads models/rf_bp_model.joblib on startup."""
+    assert state.bp_model.is_trained is True
+    assert state.bp_model.sbp_model is not None
+    assert state.bp_model.dbp_model is not None
+
+    # Test prediction with realistic physiological features
+    sample_feat = {
+        "pat_ms": 220.0,
+        "hr_bpm": 72.0,
+        "rise_time_ms": 110.0,
+        "pulse_width_ms": 210.0,
+        "perfusion_index": 1.5,
+    }
+    pred = state.bp_model.predict(sample_feat)
+    assert pred["status"] == "ESTIMATED_RESEARCH_ONLY"
+    assert pred["sbp_mmHg"] is not None
+    assert pred["dbp_mmHg"] is not None
+    assert 90 <= pred["sbp_mmHg"] <= 180
+    assert 50 <= pred["dbp_mmHg"] <= 110
+
+
+def test_unauthenticated_state_and_physiological_gating(client: TestClient):
+    """Verifies that without an authorized active participant, vitals are RESTRICTED/UNREGISTERED."""
+    # Ensure logged out state
+    client.post("/api/auth/logout")
+
+    # 1. Verify GET /api/auth/current
+    curr_resp = client.get("/api/auth/current")
+    assert curr_resp.status_code == 200
+    curr_data = curr_resp.json()
+    assert curr_data["authenticated"] is False
+    assert curr_data["user"] is None
+    assert curr_data["access_status"] == "RESTRICTED/UNREGISTERED"
+
+    # 2. Verify gating on physiological calculations
+    # Synthetic samples: 200 items (timestamp, seq, ecg, red, ir, leads_off)
+    dummy_samples = [(1000 + i * 10, i, 512, 60000, 75000, 0) for i in range(200)]
+    metrics = compute_biomedical_metrics(dummy_samples)
+    assert metrics["access_status"] == "RESTRICTED/UNREGISTERED"
+    assert metrics["signal_quality"] == "RESTRICTED/UNREGISTERED"
+    assert metrics["bp_status"] == "RESTRICTED/UNREGISTERED"
+    assert metrics["ecg_hr"] is None
+    assert metrics["ppg_hr"] is None
+    assert metrics["spo2"] is None
+    assert metrics["bp_systolic"] is None
+    assert metrics["bp_diastolic"] is None
+
+
+def test_login_authorized_participants_and_ungated_vitals(client: TestClient):
+    """Verifies that logging in Ashutosh or Dhrunil unlocks physiological calculations."""
+    for user_name in ["Ashutosh", "Dhrunil"]:
+        login_resp = client.post("/api/auth/login", json={"name": user_name})
+        assert login_resp.status_code == 200
+        data = login_resp.json()
+        assert data["authenticated"] is True
+        assert data["user"]["name"] == user_name
+
+        # Verify /api/auth/current
+        curr = client.get("/api/auth/current").json()
+        assert curr["authenticated"] is True
+        assert curr["user"]["name"] == user_name
+        assert curr["access_status"] == "AUTHORIZED"
+
+        # Verify gating is UNLOCKED
+        dummy_samples = [(1000 + i * 10, i, 512, 60000, 75000, 0) for i in range(200)]
+        metrics = compute_biomedical_metrics(dummy_samples)
+        assert metrics["access_status"] == "AUTHORIZED"
+        assert metrics["signal_quality"] != "RESTRICTED/UNREGISTERED"
+
+    # Clean up by logging out
+    client.post("/api/auth/logout")
+
+
+def test_login_unauthorized_name_rejected(client: TestClient):
+    """Verifies that unauthorized subjects cannot log in."""
+    resp = client.post("/api/auth/login", json={"name": "Unknown Cadet"})
+    assert resp.status_code == 403
+    assert "Unauthorized" in resp.json()["detail"]
+
+
+def test_login_by_face_invalid_and_unregistered(client: TestClient):
+    """Verifies POST /api/auth/login-by-face handles errors and unrecognized subjects."""
+    # 1. Invalid payload
+    resp = client.post("/api/auth/login-by-face", json={"image": "invalid_base64"})
+    assert resp.status_code == 400
+
+    # 2. Synthetic face not in authorized enrollments
+    b64_face = generate_synthetic_face_base64()
+    resp2 = client.post("/api/auth/login-by-face", json={"image": b64_face})
+    # Either NO_FACE (if detector didn't find face) or 403 UNREGISTERED_USER
+    assert resp2.status_code in (400, 403)
+    data = resp2.json()
+    assert data["authenticated"] is False
+
+
+def test_logout_endpoint_locks_access(client: TestClient):
+    """Verifies logging out immediately locks physiological calculation access."""
+    # First login as Ashutosh
+    client.post("/api/auth/login", json={"name": "Ashutosh"})
+    assert client.get("/api/auth/current").json()["authenticated"] is True
+
+    # Logout
+    logout_resp = client.post("/api/auth/logout")
+    assert logout_resp.status_code == 200
+    logout_data = logout_resp.json()
+    assert logout_data["authenticated"] is False
+
+    # Check /api/auth/current is locked
+    assert client.get("/api/auth/current").json()["authenticated"] is False
+
+    # Check metrics are gated
+    metrics = compute_biomedical_metrics([(1000, 1, 512, 60000, 75000, 0)] * 200)
+    assert metrics["access_status"] == "RESTRICTED/UNREGISTERED"

@@ -99,8 +99,23 @@ class AppState:
         self.ecg_proc = ECGProcessor(sampling_rate=100.0)
         self.ppg_proc = PPGProcessor(sampling_rate=100.0)
         self.combined_proc = CombinedBiomedicalAnalyzer(sampling_rate=100.0)
-        self.bp_model = BloodPressureModel()
+
+        # Auto-load Random Forest BP model from models/rf_bp_model.joblib
+        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "rf_bp_model.joblib")
+        if not os.path.exists(model_path):
+            model_path = "models/rf_bp_model.joblib"
+        self.bp_model = BloodPressureModel(model_file=model_path)
         self.bp_extractor = BloodPressureFeatureExtractor(sampling_rate=100.0)
+
+        # Seed default authorized participants (Ashutosh & Dhrunil) into SQLite and FaceService
+        try:
+            self.db.seed_default_participants()
+            self.face_srv.reload_known_faces()
+        except Exception as e:
+            logger.warning(f"Could not seed default participants in AppState init: {e}")
+
+        # Authenticated user profile tracking & access control
+        self.current_user: Optional[Dict[str, Any]] = None
 
         # Session tracking
         self.active_session_id: Optional[str] = None
@@ -164,11 +179,64 @@ manager = ConnectionManager()
 # Background Telemetry & Biomedical Engine Loop
 # ============================================================================
 
-def compute_biomedical_metrics(samples: List[tuple]) -> Dict[str, Any]:
+# Authorized enrolled personnel eligible for physiological calculations
+AUTHORIZED_PARTICIPANTS = {"ashutosh", "dhrunil"}
+
+
+def is_authorized_active() -> bool:
+    """
+    Checks if an authorized enrolled participant (Ashutosh or Dhrunil)
+    is currently authenticated / active in the system.
+    """
+    if state.current_user and state.current_user.get("name"):
+        if state.current_user["name"].strip().lower() in AUTHORIZED_PARTICIPANTS:
+            return True
+
+    if state.active_participant_id is not None:
+        p = state.db.get_participant_by_id(state.active_participant_id)
+        if not p:
+            for item in state.db.get_all_participants():
+                if item.get("participant_id") == state.active_participant_id:
+                    p = item
+                    break
+        if p and p.get("name", "").strip().lower() in AUTHORIZED_PARTICIPANTS:
+            return True
+
+    return False
+
+
+def compute_biomedical_metrics(samples: List[tuple], override_authorized: Optional[bool] = None) -> Dict[str, Any]:
     """
     Computes ECG, PPG, combined, and BP metrics on a sliding window.
     Designed to run efficiently in a worker thread.
+
+    Gating: If no authorized enrolled participant (Ashutosh or Dhrunil) is active/logged in,
+    marks metrics as RESTRICTED/UNREGISTERED so vitals are ONLY calculated for registered users.
     """
+    authorized = override_authorized if override_authorized is not None else is_authorized_active()
+    leads_off = int(samples[-1][5]) if (samples and len(samples) > 0 and len(samples[0]) > 5) else 0
+
+    if not authorized:
+        return {
+            "ecg_hr": None,
+            "ppg_hr": None,
+            "spo2": None,
+            "rr_interval_ms": None,
+            "rmssd_ms": None,
+            "sdnn_ms": None,
+            "pat_ms": None,
+            "resp_rate_bpm": None,
+            "signal_quality": "RESTRICTED/UNREGISTERED",
+            "bp_systolic": None,
+            "bp_diastolic": None,
+            "bp_status": "RESTRICTED/UNREGISTERED",
+            "access_status": "RESTRICTED/UNREGISTERED",
+            "is_lead_off": bool(leads_off == 1),
+            "is_finger_off": False,
+            "hr_concordant": False,
+            "message": "Access Restricted: Physiological vitals are exclusively calculated for enrolled personnel (Ashutosh / Dhrunil).",
+        }
+
     if not samples or len(samples) < 150:
         return {
             "ecg_hr": None,
@@ -182,7 +250,8 @@ def compute_biomedical_metrics(samples: List[tuple]) -> Dict[str, Any]:
             "signal_quality": "INSUFFICIENT_DATA",
             "bp_systolic": None,
             "bp_diastolic": None,
-            "bp_status": "UNCALIBRATED",
+            "bp_status": "ESTIMATED_RESEARCH_ONLY" if state.bp_model.is_trained else "UNCALIBRATED",
+            "access_status": "AUTHORIZED",
             "is_lead_off": False,
             "is_finger_off": False,
             "hr_concordant": False,
@@ -216,7 +285,7 @@ def compute_biomedical_metrics(samples: List[tuple]) -> Dict[str, Any]:
     bp_res = state.bp_model.predict(bp_features) if bp_features else {
         "sbp_mmHg": None,
         "dbp_mmHg": None,
-        "status": "UNCALIBRATED",
+        "status": "ESTIMATED_RESEARCH_ONLY" if state.bp_model.is_trained else "UNCALIBRATED",
     }
 
     is_lead_off = bool(leads_off == 1 or ecg_raw[-1] >= 1000 or ecg_res["signal_quality"]["quality"] == "DISCONNECTED")
@@ -238,6 +307,7 @@ def compute_biomedical_metrics(samples: List[tuple]) -> Dict[str, Any]:
         "bp_systolic": bp_res.get("sbp_mmHg"),
         "bp_diastolic": bp_res.get("dbp_mmHg"),
         "bp_status": bp_res.get("status", "UNCALIBRATED"),
+        "access_status": "AUTHORIZED",
         "is_lead_off": is_lead_off,
         "is_finger_off": is_finger_off,
         "hr_concordant": bool(hr_comp.get("is_concordant", False)),
@@ -329,6 +399,8 @@ async def telemetry_broadcaster_loop():
                         "active_session_id": state.active_session_id,
                         "participant_id": state.active_participant_id,
                         "is_guest": state.is_guest_session,
+                        "is_authorized": is_authorized_active(),
+                        "current_user": state.current_user,
                     },
                     "serial_status": {
                         "status": state.serial_mgr.connection_status,
@@ -355,11 +427,25 @@ async def telemetry_broadcaster_loop():
 async def lifespan(app: FastAPI):
     """Handles startup service initialization and graceful shutdown."""
     logger.info("Initializing Multimodal Health & Access System Server...")
-    
-    # Start serial acquisition (defaults to mock_mode=True for standalone operation)
+
+    # 1. Ensure Ashutosh and Dhrunil exist in database and are actively loaded into FaceService
+    try:
+        state.db.seed_default_participants()
+        state.face_srv.reload_known_faces()
+        logger.info(f"FaceService loaded enrolled participants: {state.face_srv.known_names}")
+    except Exception as e:
+        logger.error(f"Error initializing FaceService enrolled participants: {e}")
+
+    # 2. Ensure BloodPressureModel automatically loads models/rf_bp_model.joblib on startup
+    model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "rf_bp_model.joblib")
+    if not state.bp_model.is_trained and os.path.exists(model_path):
+        state.bp_model.load_model(model_path)
+    logger.info(f"BloodPressureModel loaded on startup. Ready: {state.bp_model.is_trained}")
+
+    # 3. Start serial acquisition (defaults to mock_mode=True for standalone operation)
     state.serial_mgr.start()
 
-    # Start non-blocking telemetry broadcast task
+    # 4. Start non-blocking telemetry broadcast task
     state.telemetry_task = asyncio.create_task(telemetry_broadcaster_loop())
 
     yield
@@ -417,6 +503,16 @@ class FaceEnrollRequest(BaseModel):
     name: str = Field(..., min_length=1, description="Participant name or unique subject identifier")
     image: str = Field(..., description="Base64 encoded face photo for registration")
     notes: Optional[str] = Field("", description="Optional clinical notes or demographic metadata")
+
+
+class FaceLoginRequest(BaseModel):
+    image: str = Field(..., description="Base64 encoded camera frame or Data URL")
+    recognition_thresh: float = Field(0.40, ge=0.0, le=1.0)
+
+
+class DirectLoginRequest(BaseModel):
+    name: Optional[str] = None
+    participant_id: Optional[int] = None
 
 
 class ParticipantCreateRequest(BaseModel):
@@ -479,6 +575,8 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
             "active_session_id": state.active_session_id,
             "participant_id": state.active_participant_id,
             "is_guest": state.is_guest_session,
+            "is_authorized": is_authorized_active(),
+            "current_user": state.current_user,
         },
         "serial_status": {
             "status": state.serial_mgr.connection_status,
@@ -501,6 +599,44 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
 
                 if cmd == "ping":
                     await websocket.send_json({"type": "pong", "timestamp": time.time()})
+
+                elif cmd == "login":
+                    name = msg.get("name", "")
+                    if name and name.strip().lower() in AUTHORIZED_PARTICIPANTS:
+                        canon = "Ashutosh" if name.strip().lower() == "ashutosh" else "Dhrunil"
+                        p = state.db.get_participant_by_name(canon)
+                        part_id = p["participant_id"] if p else (16 if canon == "Ashutosh" else 17)
+                        state.current_user = {
+                            "participant_id": part_id,
+                            "name": canon,
+                            "role": "Lead Biomedical Research Engineer" if canon == "Ashutosh" else "Lead Systems & Telemetry Architect",
+                            "avatar": "AS" if canon == "Ashutosh" else "DH",
+                        }
+                        state.active_participant_id = part_id
+                        await websocket.send_json({
+                            "type": "auth_status",
+                            "authenticated": True,
+                            "user": state.current_user,
+                        })
+                    else:
+                        await websocket.send_json({
+                            "type": "auth_status",
+                            "authenticated": False,
+                            "reason": "UNREGISTERED_USER",
+                        })
+
+                elif cmd == "logout":
+                    state.current_user = None
+                    state.active_participant_id = None
+                    if state.active_session_id:
+                        state.db.end_session(state.active_session_id, {"reason": "user_logout"})
+                        state.active_session_id = None
+                    state.latest_metrics = compute_biomedical_metrics([], override_authorized=False)
+                    await websocket.send_json({
+                        "type": "auth_status",
+                        "authenticated": False,
+                        "user": None,
+                    })
 
                 elif cmd == "start_session":
                     sess_id = msg.get("session_id") or f"SES_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -554,7 +690,177 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
 
 
 # ============================================================================
-# 2. FACE ACCESS & BIOMETRICS API
+# 2. AUTHENTICATION & ACCESS CONTROL API
+# ============================================================================
+
+@app.get("/api/auth/current")
+def get_current_authenticated_user():
+    """
+    Returns current authenticated profile details and physiological access status.
+    """
+    authorized = is_authorized_active()
+    return {
+        "authenticated": authorized,
+        "user": state.current_user if authorized else None,
+        "authorized_participants": ["Ashutosh", "Dhrunil"],
+        "access_status": "AUTHORIZED" if authorized else "RESTRICTED/UNREGISTERED"
+    }
+
+
+@app.post("/api/auth/login-by-face")
+async def login_by_face(req: FaceLoginRequest):
+    """
+    Authenticates an enrolled subject (Ashutosh or Dhrunil) via live camera frame.
+    Enforces anti-spoofing liveness check and biometric ArcFace recognition.
+    """
+    frame = decode_base64_image(req.image)
+    if frame is None or frame.size == 0:
+        raise HTTPException(status_code=400, detail="Invalid image payload. Expected valid base64 image data.")
+
+    result = await asyncio.to_thread(
+        state.face_srv.process_frame,
+        frame=frame,
+        recognition_thresh=req.recognition_thresh
+    )
+
+    detections = result.get("detections", [])
+    if not detections:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "authenticated": False,
+                "reason": "NO_FACE",
+                "message": "No face detected in camera frame. Position your face directly towards the camera."
+            }
+        )
+
+    primary = detections[0]
+
+    # Anti-spoofing check
+    liveness = primary.get("liveness", {})
+    if not liveness.get("is_live", True):
+        return JSONResponse(
+            status_code=403,
+            content={
+                "success": False,
+                "authenticated": False,
+                "reason": "SPOOF_DETECTED",
+                "message": "Liveness check failed. Biometric spoofing suspected.",
+                "detection": sanitize_json(primary)
+            }
+        )
+
+    name = primary.get("name", "")
+    if name.lower() not in AUTHORIZED_PARTICIPANTS:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "success": False,
+                "authenticated": False,
+                "reason": "UNREGISTERED_USER",
+                "message": "Unregistered participant. Access to physiological vitals is restricted to enrolled personnel (Ashutosh / Dhrunil).",
+                "detection": sanitize_json(primary)
+            }
+        )
+
+    canon_name = "Ashutosh" if name.lower() == "ashutosh" else "Dhrunil"
+    p = state.db.get_participant_by_name(canon_name)
+    part_id = p["participant_id"] if p else (16 if canon_name == "Ashutosh" else 17)
+    role = "Lead Biomedical Research Engineer" if canon_name == "Ashutosh" else "Lead Systems & Telemetry Architect"
+    avatar = "AS" if canon_name == "Ashutosh" else "DH"
+
+    user_profile = {
+        "participant_id": part_id,
+        "name": canon_name,
+        "role": role,
+        "avatar": avatar,
+        "similarity": primary.get("similarity", 1.0),
+        "notes": p.get("notes", "") if p else "",
+        "enrolled_at": p.get("enrolled_at", "") if p else ""
+    }
+
+    state.current_user = user_profile
+    state.active_participant_id = part_id
+
+    return {
+        "success": True,
+        "authenticated": True,
+        "user": user_profile,
+        "message": f"Welcome back, {canon_name}!",
+        "detection": sanitize_json(primary)
+    }
+
+
+@app.post("/api/auth/login")
+def direct_login(req: DirectLoginRequest):
+    """
+    Direct login endpoint for enrolled personnel (Ashutosh / Dhrunil).
+    Useful for UI personnel switcher, automated testing, and development.
+    """
+    target_name = None
+    if req.name:
+        target_name = req.name.strip()
+    elif req.participant_id:
+        p = state.db.get_participant_by_id(req.participant_id)
+        if p:
+            target_name = p["name"]
+
+    if not target_name or target_name.lower() not in AUTHORIZED_PARTICIPANTS:
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized: Access restricted exclusively to enrolled personnel (Ashutosh & Dhrunil)."
+        )
+
+    canon_name = "Ashutosh" if target_name.lower() == "ashutosh" else "Dhrunil"
+    p = state.db.get_participant_by_name(canon_name)
+    part_id = p["participant_id"] if p else (16 if canon_name == "Ashutosh" else 17)
+    role = "Lead Biomedical Research Engineer" if canon_name == "Ashutosh" else "Lead Systems & Telemetry Architect"
+    avatar = "AS" if canon_name == "Ashutosh" else "DH"
+
+    user_profile = {
+        "participant_id": part_id,
+        "name": canon_name,
+        "role": role,
+        "avatar": avatar,
+        "notes": p.get("notes", "") if p else "",
+        "enrolled_at": p.get("enrolled_at", "") if p else ""
+    }
+
+    state.current_user = user_profile
+    state.active_participant_id = part_id
+
+    return {
+        "success": True,
+        "authenticated": True,
+        "user": user_profile,
+        "message": f"Logged in as {canon_name}"
+    }
+
+
+@app.post("/api/auth/logout")
+def logout_user():
+    """
+    Logs out the active user, locking physiological calculations back to RESTRICTED.
+    """
+    state.current_user = None
+    state.active_participant_id = None
+    if state.active_session_id:
+        state.db.end_session(state.active_session_id, {"reason": "user_logout"})
+        state.active_session_id = None
+        state.session_start_time = None
+
+    state.latest_metrics = compute_biomedical_metrics([], override_authorized=False)
+
+    return {
+        "success": True,
+        "authenticated": False,
+        "message": "User logged out successfully. Access locked."
+    }
+
+
+# ============================================================================
+# 3. FACE ACCESS & BIOMETRICS API
 # ============================================================================
 
 @app.post("/api/face/process")
@@ -921,6 +1227,8 @@ def get_system_status():
         "active_session_id": state.active_session_id,
         "active_participant_id": state.active_participant_id,
         "is_guest_session": state.is_guest_session,
+        "is_authorized": is_authorized_active(),
+        "current_user": state.current_user,
         "active_connections": len(manager.active_connections),
     }
 

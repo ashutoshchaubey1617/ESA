@@ -19,12 +19,12 @@ class MedicalOscilloscope {
     this.mode = options.mode || "sweep"; // 'sweep' (clinical CRT sweep) or 'scroll' (strip-chart)
     this.sampleRate = options.sampleRate || 100; // Hz
     this.sweepDuration = options.sweepDuration || 5.0; // Seconds to sweep canvas width
-    this.gridColor = options.gridColor || "rgba(0, 240, 255, 0.08)";
-    this.gridMajorColor = options.gridMajorColor || "rgba(0, 240, 255, 0.16)";
-    this.backgroundColor = options.backgroundColor || "#080c14";
+    this.gridColor = options.gridColor || "rgba(255, 255, 255, 0.04)";
+    this.gridMajorColor = options.gridMajorColor || "rgba(255, 255, 255, 0.08)";
+    this.backgroundColor = options.backgroundColor || "#0b0f17";
     this.showGrid = options.showGrid !== undefined ? options.showGrid : true;
     this.showRuler = options.showRuler !== undefined ? options.showRuler : true;
-    this.glowIntensity = options.glowIntensity || 10; // shadowBlur px
+    this.glowIntensity = options.glowIntensity !== undefined ? options.glowIntensity : 0; // Apple Watch ECG: crisp line without neon bloom
     this.title = options.title || "WAVEFORM MONITOR";
     this.units = options.units || "mV";
 
@@ -37,8 +37,8 @@ class MedicalOscilloscope {
       this.addChannel({
         id: "ch1",
         name: "LEAD II",
-        color: "#00ff88",
-        glowColor: "rgba(0, 255, 136, 0.6)",
+        color: "#10b981",
+        glowColor: "rgba(16, 185, 129, 0.2)",
         gain: 1.0,
       });
     }
@@ -78,8 +78,8 @@ class MedicalOscilloscope {
     const ch = {
       id: config.id || `ch_${this.channels.length + 1}`,
       name: config.name || `CHANNEL ${this.channels.length + 1}`,
-      color: config.color || "#00ff88",
-      glowColor: config.glowColor || "rgba(0, 255, 136, 0.5)",
+      color: config.color || "#10b981",
+      glowColor: config.glowColor || "rgba(16, 185, 129, 0.2)",
       gain: config.gain || 1.0,
       offsetY: config.offsetY || 0, // baseline offset relative to center (-1 to 1)
       visible: config.visible !== undefined ? config.visible : true,
@@ -332,14 +332,11 @@ class MedicalOscilloscope {
     ctx.save();
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-
-    // Trace glow pass
-    if (this.glowIntensity > 0) {
-      ctx.shadowColor = ch.glowColor;
-      ctx.shadowBlur = this.glowIntensity;
-    }
+    // Apple Watch ECG Style: Crisp, clean stroke with zero neon bloom/blur
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = "transparent";
     ctx.strokeStyle = ch.color;
-    ctx.lineWidth = ch.lineWidth;
+    ctx.lineWidth = ch.lineWidth || 2.0;
 
     // Segment 1: from sweepX + headWidth to end of screen (past sweep)
     // Segment 2: from 0 to sweepX (fresh trace)
@@ -347,8 +344,8 @@ class MedicalOscilloscope {
     const total = this.totalSamplesInSweep;
     const eraseMargin = Math.ceil((this.sweepHeadWidth / w) * total);
 
-    // Draw old trace (with slight dimmer opacity)
-    ctx.globalAlpha = 0.85;
+    // Draw old trace (with slight dimmer opacity for clean persistence)
+    ctx.globalAlpha = 0.55;
     ctx.beginPath();
     let started = false;
     const startOld = (currentIdx + eraseMargin) % total;
@@ -396,13 +393,11 @@ class MedicalOscilloscope {
     ctx.save();
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-
-    if (this.glowIntensity > 0) {
-      ctx.shadowColor = ch.glowColor;
-      ctx.shadowBlur = this.glowIntensity;
-    }
+    // Apple Watch ECG Style: Crisp, clean stroke with zero neon bloom/blur
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = "transparent";
     ctx.strokeStyle = ch.color;
-    ctx.lineWidth = ch.lineWidth;
+    ctx.lineWidth = ch.lineWidth || 2.0;
 
     const step = w / (this.totalSamplesInSweep - 1);
     const startX = Math.max(0, w - samples.length * step);
@@ -431,11 +426,11 @@ class MedicalOscilloscope {
     const eraseX = this.sweepX;
     ctx.fillRect(eraseX, 0, this.sweepHeadWidth, h);
 
-    // Glowing vertical cursor line
+    // Subtle Apple-style vertical cursor line
     const gradient = ctx.createLinearGradient(eraseX, 0, eraseX + 4, 0);
-    gradient.addColorStop(0, "rgba(0, 255, 200, 0.9)");
-    gradient.addColorStop(0.3, "rgba(0, 255, 200, 0.4)");
-    gradient.addColorStop(1, "rgba(0, 255, 200, 0)");
+    gradient.addColorStop(0, "rgba(16, 185, 129, 0.75)");
+    gradient.addColorStop(0.3, "rgba(16, 185, 129, 0.25)");
+    gradient.addColorStop(1, "rgba(16, 185, 129, 0)");
 
     ctx.fillStyle = gradient;
     ctx.fillRect(eraseX - 2, 0, 8, h);
@@ -460,11 +455,11 @@ class MedicalOscilloscope {
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 1.5;
 
-    // Glowing diamond marker
+    // Diamond marker
     ctx.beginPath();
-    ctx.moveTo(x, y - 8);
+    ctx.moveTo(x, y - 7);
     ctx.lineTo(x + 5, y);
-    ctx.lineTo(x, y + 8);
+    ctx.lineTo(x, y + 7);
     ctx.lineTo(x - 5, y);
     ctx.closePath();
     ctx.fill();
@@ -472,29 +467,29 @@ class MedicalOscilloscope {
 
     // Peak label (e.g. 'R' or HR number)
     ctx.fillStyle = "#ffffff";
-    ctx.font = 'bold 10px "JetBrains Mono", monospace';
+    ctx.font = '600 10px "SF Mono", "JetBrains Mono", monospace';
     ctx.textAlign = "center";
-    ctx.fillText(label, x, y - 12);
+    ctx.fillText(label, x, y - 11);
     ctx.restore();
   }
 
   _drawAlertOverlay(ctx, w, h, message) {
     ctx.save();
     // Translucent alert background
-    ctx.fillStyle = "rgba(239, 68, 68, 0.12)";
+    ctx.fillStyle = "rgba(244, 63, 94, 0.08)";
     ctx.fillRect(0, 0, w, h);
 
     // Pulsing central alert badge
     const pulse = (Math.sin(performance.now() * 0.006) + 1) * 0.5;
-    ctx.strokeStyle = `rgba(239, 68, 68, ${0.4 + pulse * 0.5})`;
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(244, 63, 94, ${0.4 + pulse * 0.4})`;
+    ctx.lineWidth = 1.5;
     ctx.strokeRect(w * 0.15, h * 0.35, w * 0.7, h * 0.3);
 
-    ctx.fillStyle = `rgba(15, 23, 42, 0.85)`;
+    ctx.fillStyle = `rgba(17, 24, 39, 0.92)`;
     ctx.fillRect(w * 0.15 + 1, h * 0.35 + 1, w * 0.7 - 2, h * 0.3 - 2);
 
-    ctx.fillStyle = "#ef4444";
-    ctx.font = 'bold 14px "Exo", "Inter", sans-serif';
+    ctx.fillStyle = "#f43f5e";
+    ctx.font = '600 13px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif';
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(`⚠️ ${message}`, w * 0.5, h * 0.5);
@@ -507,7 +502,7 @@ class MedicalOscilloscope {
     if (pos.x < 0 || pos.x > w || pos.y < 0 || pos.y > h) return;
 
     ctx.save();
-    ctx.strokeStyle = "rgba(248, 250, 252, 0.4)";
+    ctx.strokeStyle = "rgba(248, 250, 252, 0.35)";
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
 
@@ -526,18 +521,18 @@ class MedicalOscilloscope {
     const text = `T: ${timeSec}s | V: ${val} ${this.units}`;
 
     ctx.setLineDash([]);
-    ctx.font = '10px "JetBrains Mono", monospace';
+    ctx.font = '10px "SF Mono", "JetBrains Mono", monospace';
     const textWidth = ctx.measureText(text).width + 12;
 
     const badgeX = Math.min(w - textWidth - 6, Math.max(6, pos.x + 8));
     const badgeY = Math.max(20, Math.min(h - 24, pos.y - 8));
 
-    ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
-    ctx.strokeStyle = "rgba(56, 189, 248, 0.6)";
+    ctx.fillStyle = "rgba(17, 24, 39, 0.92)";
+    ctx.strokeStyle = "rgba(59, 130, 246, 0.5)";
     ctx.fillRect(badgeX, badgeY - 14, textWidth, 20);
     ctx.strokeRect(badgeX, badgeY - 14, textWidth, 20);
 
-    ctx.fillStyle = "#38bdf8";
+    ctx.fillStyle = "#3b82f6";
     ctx.textAlign = "left";
     ctx.fillText(text, badgeX + 6, badgeY);
 
@@ -546,7 +541,7 @@ class MedicalOscilloscope {
 
   _drawHUDLabels(ctx, w, h) {
     ctx.save();
-    ctx.font = '11px "JetBrains Mono", monospace';
+    ctx.font = '10px "SF Mono", "JetBrains Mono", monospace';
 
     // Channel badges in top right
     let rightOffset = w - 12;
@@ -558,7 +553,7 @@ class MedicalOscilloscope {
       const width = ctx.measureText(label).width + 16;
       rightOffset -= width;
 
-      ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
+      ctx.fillStyle = "rgba(17, 24, 39, 0.85)";
       ctx.strokeStyle = ch.color;
       ctx.lineWidth = 1;
       ctx.fillRect(rightOffset, 8, width, 18);
@@ -572,14 +567,14 @@ class MedicalOscilloscope {
     }
 
     // Title in top left
-    ctx.fillStyle = "rgba(226, 232, 240, 0.85)";
-    ctx.font = 'bold 11px "Exo", sans-serif';
+    ctx.fillStyle = "rgba(248, 250, 252, 0.85)";
+    ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif';
     ctx.textAlign = "left";
     ctx.fillText(this.title, 12, 20);
 
     // Speed / Scale tag
     ctx.fillStyle = "rgba(148, 163, 184, 0.6)";
-    ctx.font = '9px "JetBrains Mono", monospace';
+    ctx.font = '9px "SF Mono", "JetBrains Mono", monospace';
     ctx.fillText(`SWEEP: ${this.sweepDuration}s (${Math.round(w / this.sweepDuration)} px/s)`, 12, h - 8);
 
     ctx.restore();

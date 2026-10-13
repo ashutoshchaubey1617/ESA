@@ -245,3 +245,117 @@ class BloodPressureModel:
             return True
         except Exception:
             return False
+
+
+def generate_hemodynamic_dataset(
+    n_samples: int = 3500,
+    random_state: int = 42,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Synthesizes physiologically sound hemodynamic dataset based on Bramwell-Hill
+    and Moens-Korteweg relations for cuffless blood pressure calibration.
+
+    Features:
+    - pat_ms: Pulse Arrival Time (150 - 350 ms)
+    - hr_bpm: Heart Rate (50 - 120 bpm)
+    - rise_time_ms: Systolic upslope time (60 - 180 ms)
+    - pulse_width_ms: PPG width at 50% amplitude (140 - 320 ms)
+    - perfusion_index: AC/DC pulsatile ratio (0.5 - 5.0 %)
+
+    Targets:
+    - SBP (mmHg): Systolic Blood Pressure (90 - 175 mmHg)
+    - DBP (mmHg): Diastolic Blood Pressure (55 - 110 mmHg)
+    """
+    rng = np.random.default_rng(random_state)
+
+    # 1. Feature distributions across adult population
+    pat = rng.normal(240.0, 45.0, size=n_samples)
+    pat = np.clip(pat, 150.0, 350.0)
+
+    hr = rng.normal(74.0, 14.0, size=n_samples)
+    hr = np.clip(hr, 50.0, 120.0)
+
+    # Couplings: higher HR shortens rise time and cardiac ejection duration
+    rise_time = 110.0 - 0.25 * (hr - 72.0) + rng.normal(0.0, 12.0, size=n_samples)
+    rise_time = np.clip(rise_time, 60.0, 180.0)
+
+    pulse_width = 210.0 - 0.5 * (hr - 72.0) + rng.normal(0.0, 18.0, size=n_samples)
+    pulse_width = np.clip(pulse_width, 140.0, 320.0)
+
+    pi = rng.lognormal(mean=0.6, sigma=0.4, size=n_samples)
+    pi = np.clip(pi, 0.5, 5.0)
+
+    # 2. Hemodynamic target mapping
+    # Reference resting operating point: 118 / 76 mmHg at PAT=240ms, HR=72bpm
+    sbp_base = 118.0
+    dbp_base = 76.0
+
+    # Pulse Wave Velocity non-linear arterial stiffness contribution (PWV proportional to 1/PAT)
+    pat_factor = (240.0 - pat) * 0.22 + 50.0 * (240.0 / pat - 1.0)
+
+    sbp = (
+        sbp_base
+        + pat_factor
+        + 0.18 * (hr - 72.0)
+        + 0.08 * (110.0 - rise_time)
+        + 0.05 * (pulse_width - 210.0)
+        - 1.5 * (pi - 2.0)
+        + rng.normal(0.0, 1.8, size=n_samples)
+    )
+
+    dbp = (
+        dbp_base
+        + 0.65 * pat_factor
+        + 0.12 * (hr - 72.0)
+        + 0.04 * (110.0 - rise_time)
+        + 0.03 * (pulse_width - 210.0)
+        - 1.0 * (pi - 2.0)
+        + rng.normal(0.0, 1.2, size=n_samples)
+    )
+
+    # Clinical safety clamping and physiological pulse pressure enforcement (SBP - DBP >= 25 mmHg)
+    sbp = np.clip(sbp, 90.0, 175.0)
+    dbp = np.clip(dbp, 55.0, 110.0)
+    dbp = np.minimum(dbp, sbp - 25.0)
+
+    X = np.column_stack([pat, hr, rise_time, pulse_width, pi])
+    return X, sbp, dbp
+
+
+def train_and_save_bp_model(
+    model_path: str = "models/rf_bp_model.joblib",
+    n_samples: int = 3500,
+    random_state: int = 42,
+) -> Dict[str, Any]:
+    """Generates hemodynamic dataset, trains Random Forest model, and saves weights."""
+    X, y_sbp, y_dbp = generate_hemodynamic_dataset(n_samples=n_samples, random_state=random_state)
+
+    model = BloodPressureModel(model_file=None)
+    metrics = model.train(X, y_sbp, y_dbp, test_size=0.2, random_state=random_state)
+    model.save_model(model_path)
+
+    return metrics
+
+
+if __name__ == "__main__":
+    print("=== Training Random Forest Blood Pressure Model ===")
+    out_file = "models/rf_bp_model.joblib"
+    eval_metrics = train_and_save_bp_model(model_path=out_file)
+    print(f"Model saved to: {out_file}")
+    print(f"SBP Metrics: {eval_metrics['sbp']}")
+    print(f"DBP Metrics: {eval_metrics['dbp']}")
+
+    # Verify loaded model predictions
+    loaded_model = BloodPressureModel(model_file=out_file)
+    print(f"Loaded model is_trained: {loaded_model.is_trained}")
+
+    sample_nominal = {
+        "pat_ms": 240.0,
+        "hr_bpm": 72.0,
+        "rise_time_ms": 110.0,
+        "pulse_width_ms": 210.0,
+        "perfusion_index": 2.0,
+    }
+    pred = loaded_model.predict(sample_nominal)
+    print(f"Nominal prediction: SBP={pred['sbp_mmHg']}, DBP={pred['dbp_mmHg']}, status={pred['status']}")
+

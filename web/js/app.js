@@ -96,6 +96,7 @@
     initPoincare();
     initControls();
     initSessionManager();
+    initFaceIdGate();
     initWebcamPipeline();
     initHistoryAndReports();
     initSettingsAndSimulator();
@@ -155,7 +156,7 @@
       // Update Header Title
       const meta = titles[targetViewId] || titles["view-overview"];
       if (viewTitleEl) {
-        viewTitleEl.innerHTML = `<i data-lucide="${meta.icon}" class="w-5 h-5 text-cyan-400"></i><span>${meta.text}</span>`;
+        viewTitleEl.innerHTML = `<i data-lucide="${meta.icon}" class="w-4 h-4 text-appleBlue"></i><span>${meta.text}</span>`;
         initLucideIcons();
       }
 
@@ -183,6 +184,346 @@
   }
 
   // =========================================================================
+  // APPLE FACE ID AUTHENTICATION GATE & BIOMETRIC FLOW MODULE
+  // =========================================================================
+  const ENROLLED_PERSONNEL = {
+    ashutosh: {
+      name: "Ashutosh",
+      role: "Lead Biomedical Research Engineer",
+      avatar: "AS",
+      participantId: 16,
+      department: "Clinical Biosignals",
+    },
+    dhrunil: {
+      name: "Dhrunil",
+      role: "Senior Clinical Systems Architect",
+      avatar: "DH",
+      participantId: 17,
+      department: "Hardware Telemetry",
+    },
+  };
+
+  const faceIdState = {
+    isLocked: true,
+    isAuthenticating: false,
+    currentUser: null,
+    animTimer: null,
+  };
+
+  function initFaceIdGate() {
+    const modal = document.getElementById("faceid-modal");
+    if (!modal) return;
+
+    // Personnel demo buttons for instant testing
+    const btnAshutosh = document.getElementById("btn-faceid-ashutosh");
+    const btnDhrunil = document.getElementById("btn-faceid-dhrunil");
+    const btnUnknown = document.getElementById("btn-faceid-unknown");
+    const btnBypass = document.getElementById("btn-faceid-bypass");
+    const btnLock = document.getElementById("btn-header-lock");
+    const btnLogout = document.getElementById("btn-header-logout");
+
+    if (btnAshutosh) {
+      btnAshutosh.addEventListener("click", () => {
+        startBiometricAuthenticationSequence("ashutosh");
+      });
+    }
+
+    if (btnDhrunil) {
+      btnDhrunil.addEventListener("click", () => {
+        startBiometricAuthenticationSequence("dhrunil");
+      });
+    }
+
+    if (btnUnknown) {
+      btnUnknown.addEventListener("click", () => {
+        showFaceIdRestrictedWarning();
+      });
+    }
+
+    if (btnBypass) {
+      btnBypass.addEventListener("click", () => {
+        unlockDashboardAsGuest();
+      });
+    }
+
+    if (btnLock) {
+      btnLock.addEventListener("click", () => {
+        performLogout();
+      });
+    }
+
+    if (btnLogout) {
+      btnLogout.addEventListener("click", () => {
+        performLogout();
+      });
+    }
+
+    // Initialize Face ID modal webcam if user gives permission
+    initFaceIdWebcam();
+  }
+
+  async function initFaceIdWebcam() {
+    const video = document.getElementById("faceid-video");
+    if (!video || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 480 }, height: { ideal: 360 }, facingMode: "user" },
+        audio: false,
+      });
+      video.srcObject = stream;
+      video.play();
+      startFaceIdLiveCheck(video);
+    } catch (err) {
+      console.log("Face ID webcam standby:", err);
+    }
+  }
+
+  function startFaceIdLiveCheck(video) {
+    const offscreen = document.createElement("canvas");
+    offscreen.width = 320;
+    offscreen.height = 240;
+    const offCtx = offscreen.getContext("2d");
+
+    let isRequestInFlight = false;
+    setInterval(async () => {
+      if (!faceIdState.isLocked || faceIdState.isAuthenticating || isRequestInFlight) return;
+      if (video.readyState < 2) return;
+
+      try {
+        isRequestInFlight = true;
+        offCtx.drawImage(video, 0, 0, offscreen.width, offscreen.height);
+        const b64 = offscreen.toDataURL("image/jpeg", 0.65);
+
+        const resp = await fetch("/api/auth/login-by-face", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: b64, recognition_thresh: 0.40 }),
+        });
+        const data = await resp.json();
+
+        if (data.authenticated && data.success && data.user) {
+          startBiometricAuthenticationSequence(data.user.name.toLowerCase());
+        } else if (data.reason === "UNREGISTERED_USER") {
+          showFaceIdRestrictedWarning();
+        }
+      } catch (e) {
+        // Silently continue scanning
+      } finally {
+        isRequestInFlight = false;
+      }
+    }, 1200);
+  }
+
+  function startBiometricAuthenticationSequence(personKey) {
+    if (faceIdState.isAuthenticating || !faceIdState.isLocked) return;
+
+    const person = ENROLLED_PERSONNEL[personKey.toLowerCase()] || ENROLLED_PERSONNEL.ashutosh;
+    faceIdState.isAuthenticating = true;
+
+    const progressContainer = document.getElementById("faceid-progress-container");
+    const restrictedAlert = document.getElementById("faceid-restricted-alert");
+    const reticle = document.getElementById("faceid-reticle");
+    const progressCircle = document.getElementById("faceid-progress-circle");
+    const progressText = document.getElementById("faceid-progress-text");
+    const phaseMessage = document.getElementById("faceid-phase-message");
+    const statusText = document.getElementById("faceid-status-text");
+
+    if (restrictedAlert) restrictedAlert.classList.add("hidden");
+    if (progressContainer) progressContainer.classList.remove("hidden");
+    if (reticle) reticle.className = "faceid-reticle-ring scanning";
+    if (statusText) statusText.textContent = `Enrolled Personnel Verified: ${person.name}`;
+
+    let progress = 0;
+    const totalDuration = 2000; // ms
+    const intervalTime = 25; // ms
+    const step = (100 / (totalDuration / intervalTime));
+
+    if (faceIdState.animTimer) clearInterval(faceIdState.animTimer);
+
+    faceIdState.animTimer = setInterval(() => {
+      progress += step;
+      if (progress > 100) progress = 100;
+
+      // Update SVG circular progress ring
+      if (progressCircle) {
+        const offset = 100 - progress;
+        progressCircle.style.strokeDashoffset = offset;
+      }
+      if (progressText) {
+        progressText.textContent = `${Math.round(progress)}% Synchronized`;
+      }
+
+      // Apple Biometric Loading Animation phased messages:
+      // 0% - 25%: "Authenticating Identity..."
+      // 25% - 55%: "Calibrating Optical Hemodynamics..."
+      // 55% - 85%: "Synchronizing Lead II ECG..."
+      // 85% - 100%: "Telemetry Active"
+      if (phaseMessage) {
+        if (progress < 25) {
+          phaseMessage.textContent = "Authenticating Identity...";
+        } else if (progress < 55) {
+          phaseMessage.textContent = "Calibrating Optical Hemodynamics...";
+        } else if (progress < 85) {
+          phaseMessage.textContent = "Synchronizing Lead II ECG...";
+        } else {
+          phaseMessage.textContent = "Telemetry Active";
+        }
+      }
+
+      if (progress >= 100) {
+        clearInterval(faceIdState.animTimer);
+        faceIdState.animTimer = null;
+
+        if (reticle) reticle.className = "faceid-reticle-ring verified";
+
+        // Complete smooth transition to personalized Bento Health Dashboard
+        setTimeout(() => {
+          completeAuthenticationTransition(person);
+        }, 300);
+      }
+    }, intervalTime);
+  }
+
+  async function completeAuthenticationTransition(person) {
+    const modal = document.getElementById("faceid-modal");
+    if (modal) {
+      modal.classList.add("authenticated");
+    }
+
+    faceIdState.isLocked = false;
+    faceIdState.isAuthenticating = false;
+    faceIdState.currentUser = person;
+    state.vitals.isRestricted = false;
+
+    // Inform backend of verified enrolled personnel login
+    try {
+      await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: person.name })
+      });
+    } catch (e) {
+      console.warn("Auth login sync failed:", e);
+    }
+
+    if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+      state.ws.send(JSON.stringify({ command: "login", name: person.name }));
+    }
+
+    // Update Top Bar Personalized Header with Avatar, Name, and Role
+    const hdrAvatar = document.getElementById("header-user-avatar");
+    const hdrName = document.getElementById("header-user-name");
+    const hdrRole = document.getElementById("header-user-role");
+
+    if (hdrAvatar) {
+      hdrAvatar.textContent = person.avatar;
+      hdrAvatar.className = person.avatar === "AS"
+        ? "w-7 h-7 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center font-bold text-blue-300 text-xs"
+        : "w-7 h-7 rounded-full bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center font-bold text-emerald-300 text-xs";
+    }
+    if (hdrName) hdrName.textContent = person.name;
+    if (hdrRole) hdrRole.textContent = person.role;
+
+    // Update Sidebar Active Subject
+    const subjAvatar = document.getElementById("subject-avatar");
+    const subjName = document.getElementById("subject-name");
+    const sessBadge = document.getElementById("session-badge");
+
+    if (subjAvatar) {
+      subjAvatar.textContent = person.avatar;
+      subjAvatar.className = person.avatar === "AS"
+        ? "w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center font-bold text-blue-300 text-xs"
+        : "w-8 h-8 rounded-full bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center font-bold text-emerald-300 text-xs";
+    }
+    if (subjName) subjName.textContent = person.name;
+    if (sessBadge) {
+      sessBadge.textContent = "VERIFIED";
+      sessBadge.className = "px-2 py-0.5 rounded-full text-[9px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-800/40";
+    }
+
+    // Update Identity Card in View 2
+    updateIdentityPanel({
+      name: person.name,
+      similarity: 98.4,
+      trackId: person.participantId || 101,
+      isLive: true,
+      blink: true,
+    });
+
+    // Automatically bind telemetry session to verified subject
+    bindSubjectToSession(person.name, person.participantId);
+  }
+
+  function showFaceIdRestrictedWarning() {
+    if (faceIdState.isAuthenticating) return;
+
+    const progressContainer = document.getElementById("faceid-progress-container");
+    const restrictedAlert = document.getElementById("faceid-restricted-alert");
+    const reticle = document.getElementById("faceid-reticle");
+    const statusText = document.getElementById("faceid-status-text");
+
+    if (progressContainer) progressContainer.classList.add("hidden");
+    if (restrictedAlert) {
+      restrictedAlert.classList.remove("hidden");
+      restrictedAlert.style.animation = "none";
+      restrictedAlert.offsetHeight; // reflow
+      restrictedAlert.style.animation = "";
+    }
+    if (reticle) reticle.className = "faceid-reticle-ring restricted";
+    if (statusText) statusText.textContent = "Access Denied: Unregistered participant detected.";
+
+    state.vitals.isRestricted = true;
+    refreshMetricCards();
+  }
+
+  function unlockDashboardAsGuest() {
+    const modal = document.getElementById("faceid-modal");
+    if (modal) modal.classList.add("authenticated");
+    faceIdState.isLocked = false;
+    faceIdState.isAuthenticating = false;
+  }
+
+  async function performLogout() {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (e) {
+      console.warn("Logout request failed:", e);
+    }
+    if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+      state.ws.send(JSON.stringify({ command: "logout" }));
+    }
+    lockSystemToFaceId();
+  }
+
+  function lockSystemToFaceId() {
+    faceIdState.isLocked = true;
+    faceIdState.isAuthenticating = false;
+    faceIdState.currentUser = null;
+    state.vitals.isRestricted = true;
+    refreshMetricCards();
+
+    if (faceIdState.animTimer) {
+      clearInterval(faceIdState.animTimer);
+      faceIdState.animTimer = null;
+    }
+
+    const modal = document.getElementById("faceid-modal");
+    const progressContainer = document.getElementById("faceid-progress-container");
+    const restrictedAlert = document.getElementById("faceid-restricted-alert");
+    const reticle = document.getElementById("faceid-reticle");
+    const statusText = document.getElementById("faceid-status-text");
+    const progressCircle = document.getElementById("faceid-progress-circle");
+
+    if (modal) modal.classList.remove("authenticated");
+    if (progressContainer) progressContainer.classList.add("hidden");
+    if (restrictedAlert) restrictedAlert.classList.add("hidden");
+    if (reticle) reticle.className = "faceid-reticle-ring scanning";
+    if (statusText) statusText.textContent = "Position your face within the frame to authenticate";
+    if (progressCircle) progressCircle.style.strokeDashoffset = "100";
+  }
+
+  // =========================================================================
   // 2. OSCILLOSCOPE ENGINES SETUP
   // =========================================================================
   function initOscilloscopes() {
@@ -198,8 +539,8 @@
           {
             id: "ecg",
             name: "LEAD II",
-            color: "#00ff88",
-            glowColor: "rgba(0, 255, 136, 0.5)",
+            color: "#10b981",
+            glowColor: "rgba(16, 185, 129, 0.15)",
             gain: 1.0,
             minVal: -1.5,
             maxVal: 2.5,
@@ -220,8 +561,8 @@
           {
             id: "ppg_ir",
             name: "IR (880nm)",
-            color: "#00f0ff",
-            glowColor: "rgba(0, 240, 255, 0.5)",
+            color: "#3b82f6",
+            glowColor: "rgba(59, 130, 246, 0.15)",
             gain: 1.0,
             offsetY: 0.15,
             minVal: -1.2,
@@ -230,8 +571,8 @@
           {
             id: "ppg_red",
             name: "RED (660nm)",
-            color: "#ff3366",
-            glowColor: "rgba(255, 51, 102, 0.4)",
+            color: "#f43f5e",
+            glowColor: "rgba(244, 63, 94, 0.15)",
             gain: 0.8,
             offsetY: -0.25,
             minVal: -1.2,
@@ -253,8 +594,8 @@
           {
             id: "ecg",
             name: "LEAD II",
-            color: "#00ff88",
-            glowColor: "rgba(0, 255, 136, 0.6)",
+            color: "#10b981",
+            glowColor: "rgba(16, 185, 129, 0.15)",
             gain: 1.0,
             minVal: -1.5,
             maxVal: 2.5,
@@ -275,8 +616,8 @@
           {
             id: "ppg_ir",
             name: "IR 880nm (Arterial)",
-            color: "#00f0ff",
-            glowColor: "rgba(0, 240, 255, 0.5)",
+            color: "#3b82f6",
+            glowColor: "rgba(59, 130, 246, 0.15)",
             gain: 1.0,
             offsetY: 0.15,
             minVal: -1.2,
@@ -285,8 +626,8 @@
           {
             id: "ppg_red",
             name: "Red 660nm (Venous)",
-            color: "#ff3366",
-            glowColor: "rgba(255, 51, 102, 0.4)",
+            color: "#f43f5e",
+            glowColor: "rgba(244, 63, 94, 0.15)",
             gain: 0.9,
             offsetY: -0.25,
             minVal: -1.2,
@@ -470,6 +811,15 @@
 
   function updateBiomedicalMetrics(m) {
     const v = state.vitals;
+    const isRestricted = (m.access_status === "RESTRICTED/UNREGISTERED" || m.signal_quality === "RESTRICTED/UNREGISTERED" || m.bp_status === "RESTRICTED/UNREGISTERED");
+    v.isRestricted = isRestricted;
+
+    if (isRestricted) {
+      v.signalQuality = "RESTRICTED/UNREGISTERED";
+      refreshMetricCards();
+      return;
+    }
+
     if (m.ecg_hr !== undefined && m.ecg_hr !== null && m.ecg_hr > 0) v.ecgHr = Math.round(m.ecg_hr);
     if (m.ppg_hr !== undefined && m.ppg_hr !== null && m.ppg_hr > 0) v.ppgHr = Math.round(m.ppg_hr);
     if (m.spo2 !== undefined && m.spo2 !== null && m.spo2 > 0) v.spo2 = parseFloat(m.spo2.toFixed(1));
@@ -500,6 +850,58 @@
     const elRmssd = document.getElementById("metric-rmssd");
     const elSdnn = document.getElementById("metric-sdnn");
     const elMiniRr = document.getElementById("mini-rr");
+    const hrQualityTag = document.getElementById("hr-quality-tag");
+
+    // Live ECG View readouts
+    const elEcgHr = document.getElementById("ecg-hr-value");
+    const elEcgRr = document.getElementById("ecg-rr-value");
+    const elEcgRmssd = document.getElementById("ecg-rmssd-sub");
+    const elEcgSdnn = document.getElementById("ecg-sdnn-sub");
+
+    // Live PPG View readouts
+    const elPpgSpo2 = document.getElementById("ppg-spo2-value");
+    const elPpgPi = document.getElementById("ppg-pi-value");
+
+    // Analytics View readouts
+    const elSysVal = document.getElementById("analytics-sys-val");
+    const elDiaVal = document.getElementById("analytics-dia-val");
+    const elTablePat = document.getElementById("table-pat");
+    const elTableMap = document.getElementById("table-map");
+    const elTablePp = document.getElementById("table-pp");
+    const elEdrBpm = document.getElementById("edr-bpm");
+
+    if (v.isRestricted) {
+      if (elHr) elHr.textContent = "--";
+      if (elSpo2) elSpo2.textContent = "--";
+      if (elBp) elBp.textContent = "-- / --";
+      if (elResp) elResp.textContent = "--";
+      if (elPat) elPat.textContent = "--";
+      if (elRmssd) elRmssd.textContent = "--";
+      if (elSdnn) elSdnn.textContent = "-- ms";
+      if (elMiniRr) elMiniRr.textContent = "-- ms";
+      if (hrQualityTag) {
+        hrQualityTag.textContent = "RESTRICTED";
+        hrQualityTag.className = "text-rose-400 font-semibold";
+      }
+      if (elEcgHr) elEcgHr.textContent = "-- BPM";
+      if (elEcgRr) elEcgRr.textContent = "-- ms";
+      if (elEcgRmssd) elEcgRmssd.textContent = "-- ms";
+      if (elEcgSdnn) elEcgSdnn.textContent = "-- ms";
+      if (elPpgSpo2) elPpgSpo2.textContent = "--%";
+      if (elPpgPi) elPpgPi.textContent = "--%";
+      if (elSysVal) elSysVal.textContent = "--";
+      if (elDiaVal) elDiaVal.textContent = "--";
+      if (elTablePat) elTablePat.textContent = "-- ms";
+      if (elTablePp) elTablePp.textContent = "--";
+      if (elTableMap) elTableMap.textContent = "--";
+      if (elEdrBpm) elEdrBpm.textContent = "--";
+      return;
+    }
+
+    if (hrQualityTag) {
+      hrQualityTag.textContent = "VALID";
+      hrQualityTag.className = "text-emerald-400 font-semibold";
+    }
 
     if (elHr) elHr.textContent = v.ecgHr;
     if (elSpo2) elSpo2.textContent = v.spo2.toFixed(1);
@@ -510,29 +912,13 @@
     if (elSdnn) elSdnn.textContent = `${v.sdnn} ms`;
     if (elMiniRr) elMiniRr.textContent = `${v.rrInterval} ms`;
 
-    // Live ECG View readouts
-    const elEcgHr = document.getElementById("ecg-hr-value");
-    const elEcgRr = document.getElementById("ecg-rr-value");
-    const elEcgRmssd = document.getElementById("ecg-rmssd-sub");
-    const elEcgSdnn = document.getElementById("ecg-sdnn-sub");
     if (elEcgHr) elEcgHr.textContent = `${v.ecgHr} BPM`;
     if (elEcgRr) elEcgRr.textContent = `${v.rrInterval} ms`;
     if (elEcgRmssd) elEcgRmssd.textContent = `${v.rmssd} ms`;
     if (elEcgSdnn) elEcgSdnn.textContent = `${v.sdnn} ms`;
 
-    // Live PPG View readouts
-    const elPpgSpo2 = document.getElementById("ppg-spo2-value");
-    const elPpgPi = document.getElementById("ppg-pi-value");
     if (elPpgSpo2) elPpgSpo2.textContent = `${v.spo2.toFixed(1)}%`;
     if (elPpgPi) elPpgPi.textContent = `${v.pi.toFixed(1)}%`;
-
-    // Analytics View readouts
-    const elSysVal = document.getElementById("analytics-sys-val");
-    const elDiaVal = document.getElementById("analytics-dia-val");
-    const elTablePat = document.getElementById("table-pat");
-    const elTableMap = document.getElementById("table-map");
-    const elTablePp = document.getElementById("table-pp");
-    const elEdrBpm = document.getElementById("edr-bpm");
 
     if (elSysVal) elSysVal.textContent = v.bpSys;
     if (elDiaVal) elDiaVal.textContent = v.bpDia;
@@ -722,8 +1108,8 @@
         }
         if (audioBtn) {
           audioBtn.className = state.audioBeepEnabled
-            ? "flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-cyan-950 border border-cyan-800 text-xs text-cyan-300 transition-colors"
-            : "flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-cyan-300 transition-colors";
+            ? "flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-950/60 border border-blue-800/60 text-xs text-blue-300 transition-colors"
+            : "flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-white transition-colors";
         }
       });
     }
@@ -788,7 +1174,12 @@
         state.webcam.active = true;
         if (video) {
           video.srcObject = stream;
-          video.play();
+          video.play().catch(() => {});
+        }
+        const faceIdVideo = document.getElementById("faceid-video");
+        if (faceIdVideo) {
+          faceIdVideo.srcObject = stream;
+          faceIdVideo.play().catch(() => {});
         }
         if (placeholder) placeholder.classList.add("hidden");
         startFaceProcessingLoop();
@@ -829,7 +1220,7 @@
     if (btnBind) {
       btnBind.addEventListener("click", () => {
         const idName = document.getElementById("id-recognized-name").textContent;
-        const participantId = 101;
+        const participantId = 16;
         bindSubjectToSession(idName, participantId);
       });
     }
@@ -875,7 +1266,23 @@
 
         if (res.ok) {
           const data = await res.json();
-          renderFaceDetections(ctx, overlay.width, overlay.height, data.detections || []);
+          const detections = data.detections || [];
+          renderFaceDetections(ctx, overlay.width, overlay.height, detections);
+
+          // Handle Apple Face ID Gate profile recognition
+          if (faceIdState.isLocked && !faceIdState.isAuthenticating && detections.length > 0) {
+            const topDet = detections[0];
+            const nameLower = (topDet.name || "").toLowerCase();
+            const isLive = topDet.liveness ? topDet.liveness.is_live : true;
+
+            if (isLive && (nameLower.includes("ashutosh") || nameLower === "ashutosh")) {
+              startBiometricAuthenticationSequence("ashutosh");
+            } else if (isLive && (nameLower.includes("dhrunil") || nameLower === "dhrunil")) {
+              startBiometricAuthenticationSequence("dhrunil");
+            } else if (!topDet.is_known || nameLower.includes("unknown") || nameLower === "") {
+              showFaceIdRestrictedWarning();
+            }
+          }
         } else {
           // If server returns error, fallback to client overlay tracking
           renderMockFaceOverlay(ctx, overlay.width, overlay.height);
@@ -914,29 +1321,33 @@
       const isKnown = det.is_known;
       const isLive = det.liveness ? det.liveness.is_live : true;
 
-      // Color scheme
-      let strokeColor = "#00ff88"; // Live known
-      if (!isLive) strokeColor = "#ef4444"; // Spoof
-      else if (!isKnown) strokeColor = "#f59e0b"; // Unknown live
+      // Apple clean colors: Forest emerald for known live, Amber for unknown, Coral for spoof
+      let strokeColor = "#10b981"; // Apple emerald
+      if (!isLive) strokeColor = "#f43f5e"; // Apple coral (spoof)
+      else if (!isKnown) strokeColor = "#f59e0b"; // Apple amber (unknown)
 
-      // Cyber Bounding Box Reticle
+      // Clean rounded bounding box - NO NEON GLOW
       ctx.strokeStyle = strokeColor;
       ctx.lineWidth = 2;
-      ctx.shadowColor = strokeColor;
-      ctx.shadowBlur = 8;
-      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
       ctx.shadowBlur = 0;
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(x1, y1, x2 - x1, y2 - y1, 12);
+        ctx.stroke();
+      } else {
+        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+      }
 
       // Name & Confidence Badge
       const name = det.name || "UNKNOWN";
       const score = Math.round((det.similarity || 0.92) * 100);
       const tagText = `${name} (${score}%)`;
 
-      ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+      ctx.fillStyle = "rgba(17, 24, 39, 0.88)";
       ctx.fillRect(x1, y1 - 24, ctx.measureText(tagText).width + 16, 22);
 
       ctx.fillStyle = strokeColor;
-      ctx.font = 'bold 11px "JetBrains Mono", monospace';
+      ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif';
       ctx.fillText(tagText, x1 + 8, y1 - 8);
 
       // Update Identity HUD Panel
@@ -955,22 +1366,21 @@
 
     // Subtle breathing drift of bounding box
     state.webcam.mockAngle += 0.04;
-    const dx = Math.sin(state.webcam.mockAngle) * 15;
-    const dy = Math.cos(state.webcam.mockAngle * 0.7) * 8;
+    const dx = Math.sin(state.webcam.mockAngle) * 12;
+    const dy = Math.cos(state.webcam.mockAngle * 0.7) * 6;
 
     const boxW = Math.min(220, w * 0.35);
     const boxH = Math.min(260, h * 0.55);
     const x1 = (w - boxW) / 2 + dx;
     const y1 = (h - boxH) / 2 + dy - 20;
 
-    // Glowing Target Reticle
-    ctx.strokeStyle = "#00ff88";
+    // Apple Clean Target Reticle (No harsh neon glow)
+    ctx.strokeStyle = "#10b981";
     ctx.lineWidth = 2;
-    ctx.shadowColor = "rgba(0, 255, 136, 0.6)";
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 0;
 
     // 4 Corner Brackets
-    const len = 20;
+    const len = 18;
     ctx.beginPath();
     // Top-Left
     ctx.moveTo(x1, y1 + len); ctx.lineTo(x1, y1); ctx.lineTo(x1 + len, y1);
@@ -982,8 +1392,6 @@
     ctx.moveTo(x1 + boxW - len, y1 + boxH); ctx.lineTo(x1 + boxW, y1 + boxH); ctx.lineTo(x1 + boxW, y1 + boxH - len);
     ctx.stroke();
 
-    ctx.shadowBlur = 0;
-
     // 5-Point Facial Landmarks (Eyes, Nose, Mouth Corners)
     const eyeY = y1 + boxH * 0.38;
     const leftEye = { x: x1 + boxW * 0.33, y: eyeY };
@@ -992,27 +1400,27 @@
     const mouthL = { x: x1 + boxW * 0.38, y: y1 + boxH * 0.75 };
     const mouthR = { x: x1 + boxW * 0.62, y: y1 + boxH * 0.75 };
 
-    ctx.fillStyle = "#00f0ff";
+    ctx.fillStyle = "#3b82f6";
     [leftEye, rightEye, nose, mouthL, mouthR].forEach((pt) => {
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2);
+      ctx.arc(pt.x, pt.y, 2.5, 0, Math.PI * 2);
       ctx.fill();
     });
 
     // Tag Header
-    const tag = "ID:TRK-102 John Doe (94.2%) [LIVE]";
-    ctx.font = 'bold 11px "JetBrains Mono", monospace';
+    const tag = "ID:016 Ashutosh (98.4%) [VERIFIED]";
+    ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif';
     const tagW = ctx.measureText(tag).width + 16;
-    ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+    ctx.fillStyle = "rgba(17, 24, 39, 0.9)";
     ctx.fillRect(x1, y1 - 24, tagW, 20);
-    ctx.fillStyle = "#00ff88";
+    ctx.fillStyle = "#10b981";
     ctx.fillText(tag, x1 + 8, y1 - 9);
 
     // Update Identity HUD
     updateIdentityPanel({
-      name: "John Doe",
-      similarity: 94.2,
-      trackId: 102,
+      name: "Ashutosh",
+      similarity: 98.4,
+      trackId: 16,
       isLive: true,
       blink: true,
     });
@@ -1071,7 +1479,7 @@
         if (fb) {
           fb.classList.remove("hidden");
           fb.textContent = `Enrolling ${name}...`;
-          fb.className = "mt-2 text-[11px] font-mono text-cyan-400 text-center";
+          fb.className = "mt-2 text-[11px] font-mono text-blue-400 text-center";
         }
 
         // Try API enrollment with webcam snapshot if available
@@ -1150,16 +1558,16 @@
 
     if (badge) {
       badge.textContent = isGuest ? "GUEST ACTIVE" : "SUBJECT BOUND";
-      badge.className = "px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800";
+      badge.className = "px-2 py-0.5 rounded-full text-[9px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-800/40";
     }
     if (subjName) subjName.textContent = name;
     if (avatar) {
       avatar.textContent = name.split(" ").map((w) => w[0]).join("").slice(0, 2);
-      avatar.className = "w-8 h-8 rounded-full bg-cyan-950 border border-cyan-500/50 flex items-center justify-center font-bold text-cyan-300 text-xs";
+      avatar.className = "w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center font-bold text-blue-300 text-xs";
     }
     if (btnToggle) {
       btnToggle.textContent = "End Session";
-      btnToggle.className = "flex-1 py-1.5 rounded bg-red-600/30 hover:bg-red-600/50 text-red-300 border border-red-500/40 text-[11px] font-medium transition-colors";
+      btnToggle.className = "flex-1 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-[11px] font-medium transition-colors";
     }
   }
 
@@ -1375,27 +1783,27 @@
       const tr = document.createElement("tr");
       tr.className = "hover:bg-slate-900/40 transition-colors";
       tr.innerHTML = `
-        <td class="p-3.5 font-bold text-cyan-400">${s.id}</td>
-        <td class="p-3.5 font-semibold text-slate-100">${s.name}</td>
+        <td class="p-3.5 font-medium text-blue-400">${s.id}</td>
+        <td class="p-3.5 font-medium text-slate-100">${s.name}</td>
         <td class="p-3.5">
-          <span class="px-2 py-0.5 rounded text-[10px] font-mono ${
-            s.isGuest ? "bg-slate-800 text-slate-300" : "bg-purple-950 text-purple-300 border border-purple-800"
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-mono ${
+            s.isGuest ? "bg-slate-800 text-slate-300" : "bg-purple-950/60 text-purple-300 border border-purple-800/50"
           }">${s.isGuest ? "GUEST" : "ENROLLED"}</span>
         </td>
         <td class="p-3.5 text-slate-400">${s.startTime}</td>
         <td class="p-3.5 font-mono text-slate-300">${s.duration}</td>
-        <td class="p-3.5 font-mono text-emerald-400 font-bold">${s.avgHr} BPM</td>
-        <td class="p-3.5 font-mono text-cyan-400 font-bold">${s.avgSpo2}%</td>
+        <td class="p-3.5 font-mono text-emerald-400 font-medium">${s.avgHr} BPM</td>
+        <td class="p-3.5 font-mono text-blue-400 font-medium">${s.avgSpo2}%</td>
         <td class="p-3.5">
-          <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800">
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-800/40">
             ${s.status}
           </span>
         </td>
         <td class="p-3.5 text-right space-x-2">
-          <button class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs transition-colors" onclick="window.loadSessionReport('${s.id}')">
+          <button class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-300 text-xs transition-colors" onclick="window.loadSessionReport('${s.id}')">
             Report
           </button>
-          <button class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-emerald-300 text-xs transition-colors" onclick="window.exportSessionCSV('${s.id}')">
+          <button class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 text-xs transition-colors" onclick="window.exportSessionCSV('${s.id}')">
             CSV
           </button>
         </td>
@@ -1612,8 +2020,8 @@
           if (fullPpgScope) fullPpgScope.setLeadsOff(true, "FINGER OFF - CHECK SENSOR CLIP");
         } else {
           if (probePill) {
-            probePill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> ATTACHED';
-            probePill.className = "text-cyan-400 font-semibold flex items-center gap-1";
+            probePill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> ATTACHED';
+            probePill.className = "text-blue-400 font-medium flex items-center gap-1";
           }
           if (miniPpgScope) miniPpgScope.setLeadsOff(false);
           if (fullPpgScope) fullPpgScope.setLeadsOff(false);
