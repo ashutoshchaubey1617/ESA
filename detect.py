@@ -1,3 +1,4 @@
+import os
 import time
 
 import cv2
@@ -5,9 +6,9 @@ import cv2
 from face_detection.scrfd.detector import SCRFD
 from face_detection.yolov5_face.detector import Yolov5Face
 
-# Initialize the face detector
-detector = Yolov5Face(model_file="face_detection/yolov5_face/weights/yolov5m-face.pt")
-# detector = SCRFD(model_file="face_detection/scrfd/weights/scrfd_2.5g_bnkps.onnx")
+# Initialize the face detector (SCRFD is pre-bundled; Yolov5Face can also be selected)
+detector = SCRFD(model_file="face_detection/scrfd/weights/scrfd_2.5g_bnkps.onnx")
+# detector = Yolov5Face(model_file="face_detection/yolov5_face/weights/yolov5m-face.pt")
 
 
 def main():
@@ -23,6 +24,7 @@ def main():
     frame_width = int(cap.get(3))
     frame_height = int(cap.get(4))
     size = (frame_width, frame_height)
+    os.makedirs("results", exist_ok=True)
     video = cv2.VideoWriter(
         "results/face-detection.mp4", cv2.VideoWriter_fourcc(*"mp4v"), 30, size
     )

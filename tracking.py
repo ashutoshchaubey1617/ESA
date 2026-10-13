@@ -90,6 +90,9 @@ def inference(detector, args):
             break
         frame_id += 1
 
+    cap.release()
+    cv2.destroyAllWindows()
+
 
 def main():
     file_name = "./face_tracking/config/config_tracking.yaml"

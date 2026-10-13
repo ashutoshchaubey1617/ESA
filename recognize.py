@@ -164,12 +164,18 @@ def recognition(face_image):
     Returns:
         tuple: A tuple containing the recognition score and name.
     """
+    if len(images_names) == 0 or len(images_embs) == 0:
+        return 0.0, "UN_KNOWN"
+
     # Get feature from face
     query_emb = get_feature(face_image)
 
     score, id_min = compare_encodings(query_emb, images_embs)
-    name = images_names[id_min]
-    score = score[0]
+    if id_min < len(images_names):
+        name = images_names[id_min]
+    else:
+        name = "UN_KNOWN"
+    score = score[0] if hasattr(score, "__len__") else float(score)
 
     return score, name
 
@@ -246,6 +252,9 @@ def tracking(detector, args):
         if ch == 27 or ch == ord("q") or ch == ord("Q"):
             break
 
+    cap.release()
+    cv2.destroyAllWindows()
+
 
 def recognize():
     """Face recognition in a separate thread."""
@@ -255,6 +264,10 @@ def recognize():
         detection_bboxes = data_mapping["detection_bboxes"]
         tracking_ids = data_mapping["tracking_ids"]
         tracking_bboxes = data_mapping["tracking_bboxes"]
+
+        if not isinstance(raw_image, np.ndarray) or len(tracking_bboxes) == 0:
+            time.sleep(0.01)
+            continue
 
         for i in range(len(tracking_bboxes)):
             for j in range(len(detection_bboxes)):
@@ -276,8 +289,7 @@ def recognize():
 
                     break
 
-        if tracking_bboxes == []:
-            pass
+        time.sleep(0.005)
 
 
 def main():

@@ -173,26 +173,37 @@ class BYTETracker(object):
         lost_stracks = []
         removed_stracks = []
 
+        if output_results is None:
+            output_results = np.empty((0, 5), dtype=np.float32)
+        elif isinstance(output_results, torch.Tensor):
+            output_results = output_results.detach().cpu().numpy()
+        output_results = np.asarray(output_results, dtype=np.float32)
+
+        if output_results.ndim == 1:
+            output_results = output_results.reshape(1, -1) if output_results.size > 0 else np.empty((0, 5), dtype=np.float32)
+        elif output_results.ndim == 0 or output_results.shape[0] == 0:
+            output_results = np.empty((0, 5), dtype=np.float32)
+
         if output_results.shape[1] == 5:
             scores = output_results[:, 4]
-            bboxes = output_results[:, :4]
+            bboxes = output_results[:, :4].astype(np.float32).copy()
         else:
-            output_results = output_results.cpu().numpy()
             scores = output_results[:, 4] * output_results[:, 5]
-            bboxes = output_results[:, :4]  # x1y1x2y2
+            bboxes = output_results[:, :4].astype(np.float32).copy()  # x1y1x2y2
         img_h, img_w = img_info[0], img_info[1]
         scale = min(img_size[0] / float(img_h), img_size[1] / float(img_w))
-        bboxes /= scale
+        if scale > 0:
+            bboxes /= scale
 
         remain_inds = scores > self.args["track_thresh"]
         inds_low = scores > 0.1
         inds_high = scores < self.args["track_thresh"]
 
         inds_second = np.logical_and(inds_low, inds_high)
-        dets_second = bboxes[inds_second.to(torch.bool)]
+        dets_second = bboxes[inds_second]
         dets = bboxes[remain_inds]
         scores_keep = scores[remain_inds]
-        scores_second = scores[inds_second.to(torch.bool)]
+        scores_second = scores[inds_second]
 
         if len(dets) > 0:
             """Detections"""

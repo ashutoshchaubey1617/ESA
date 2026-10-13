@@ -69,6 +69,16 @@ def add_persons(backup_dir, add_persons_dir, faces_save_dir, features_path):
         faces_save_dir (str): Directory to save the extracted faces.
         features_path (str): Path to save face features.
     """
+    if not os.path.exists(add_persons_dir):
+        print(f"Directory {add_persons_dir} not found!")
+        return None
+
+    os.makedirs(backup_dir, exist_ok=True)
+    os.makedirs(faces_save_dir, exist_ok=True)
+    feat_parent = os.path.dirname(features_path)
+    if feat_parent:
+        os.makedirs(feat_parent, exist_ok=True)
+
     # Initialize lists to store names and features of added images
     images_name = []
     images_emb = []
@@ -76,14 +86,18 @@ def add_persons(backup_dir, add_persons_dir, faces_save_dir, features_path):
     # Read the folder with images of the new person, extract faces, and save them
     for name_person in os.listdir(add_persons_dir):
         person_image_path = os.path.join(add_persons_dir, name_person)
+        if not os.path.isdir(person_image_path):
+            continue
 
         # Create a directory to save the faces of the person
         person_face_path = os.path.join(faces_save_dir, name_person)
         os.makedirs(person_face_path, exist_ok=True)
 
         for image_name in os.listdir(person_image_path):
-            if image_name.endswith(("png", "jpg", "jpeg")):
+            if image_name.lower().endswith(("png", "jpg", "jpeg")):
                 input_image = cv2.imread(os.path.join(person_image_path, image_name))
+                if input_image is None:
+                    continue
 
                 # Detect faces and landmarks using the face detector
                 bboxes, landmarks = detector.detect(image=input_image)
@@ -98,6 +112,8 @@ def add_persons(backup_dir, add_persons_dir, faces_save_dir, features_path):
 
                     # Extract the face from the image
                     face_image = input_image[y1:y2, x1:x2]
+                    if face_image.size == 0:
+                        continue
 
                     # Path to save the face
                     path_save_face = os.path.join(person_face_path, f"{number_files}.jpg")
@@ -110,7 +126,7 @@ def add_persons(backup_dir, add_persons_dir, faces_save_dir, features_path):
                     images_name.append(name_person)
 
     # Check if no new person is found
-    if images_emb == [] and images_name == []:
+    if len(images_emb) == 0 and len(images_name) == 0:
         print("No new person found!")
         return None
 
@@ -121,7 +137,7 @@ def add_persons(backup_dir, add_persons_dir, faces_save_dir, features_path):
     # Read existing features if available
     features = read_features(features_path)
 
-    if features is not None:
+    if features is not None and len(features[0]) > 0:
         # Unpack existing features
         old_images_name, old_images_emb = features
 
@@ -137,7 +153,10 @@ def add_persons(backup_dir, add_persons_dir, faces_save_dir, features_path):
     # Move the data of the new person to the backup data directory
     for sub_dir in os.listdir(add_persons_dir):
         dir_to_move = os.path.join(add_persons_dir, sub_dir)
-        shutil.move(dir_to_move, backup_dir, copy_function=shutil.copytree)
+        target_dir = os.path.join(backup_dir, sub_dir)
+        if os.path.exists(target_dir):
+            shutil.rmtree(target_dir)
+        shutil.move(dir_to_move, backup_dir)
 
     print("Successfully added new person!")
 

@@ -1,3 +1,4 @@
+import os
 import time
 
 import cv2
@@ -24,6 +25,7 @@ def main():
     frame_width = int(cap.get(3))
     frame_height = int(cap.get(4))
     size = (frame_width, frame_height)
+    os.makedirs("results", exist_ok=True)
     video = cv2.VideoWriter("results/face-detection.mp4", cv2.VideoWriter_fourcc(*"mp4v"), 30, size)
 
     # Read frames from the camera
@@ -38,6 +40,7 @@ def main():
         tl = 1 or round(0.002 * (h + w) / 2) + 1  # Line and font thickness
         clors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (0, 255, 255)]
 
+        align = None
         # Draw bounding boxes and landmarks on the frame
         for i in range(len(bboxes)):
             # Get location of the face
@@ -68,7 +71,8 @@ def main():
 
         # Show the result in a window
         cv2.imshow("Face Detection", frame)
-        cv2.imshow("Face align", align)
+        if align is not None:
+            cv2.imshow("Face align", align)
 
         # Press 'Q' on the keyboard to exit
         if cv2.waitKey(25) & 0xFF == ord("q"):

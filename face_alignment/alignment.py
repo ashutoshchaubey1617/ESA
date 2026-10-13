@@ -44,8 +44,11 @@ def estimate_norm(lmk, image_size=112, mode="arcface"):
     dst[:, 0] += diff_x
 
     # Estimate the similarity transformation
-    tform = trans.SimilarityTransform()
-    tform.estimate(lmk, dst)
+    if hasattr(trans.SimilarityTransform, "from_estimate"):
+        tform = trans.SimilarityTransform.from_estimate(lmk, dst)
+    else:
+        tform = trans.SimilarityTransform()
+        tform.estimate(lmk, dst)
     M = tform.params[0:2, :]
 
     return M

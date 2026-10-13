@@ -6,7 +6,9 @@ face-dev/
 .env
 # *.npz
 index.faiss
-test*
+# test*
+!tests/
+!tests/**
 # *.ipynb
 NOTE.md
 data-elastic-search
