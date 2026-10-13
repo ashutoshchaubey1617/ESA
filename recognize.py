@@ -277,7 +277,7 @@ def recognize():
                     break
 
         if tracking_bboxes == []:
-            print("Waiting for a person...")
+            pass
 
 
 def main():
@@ -285,19 +285,12 @@ def main():
     file_name = "./face_tracking/config/config_tracking.yaml"
     config_tracking = load_config(file_name)
 
-    # Start tracking thread
-    thread_track = threading.Thread(
-        target=tracking,
-        args=(
-            detector,
-            config_tracking,
-        ),
-    )
-    thread_track.start()
-
-    # Start recognition thread
-    thread_recognize = threading.Thread(target=recognize)
+    # Start recognition in background thread
+    thread_recognize = threading.Thread(target=recognize, daemon=True)
     thread_recognize.start()
+
+    # Run tracking & imshow on the main thread (required by macOS Cocoa)
+    tracking(detector, config_tracking)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,8 @@
 *.mp4
 
+face-dev/
+.DS_Store
+
 .env
 # *.npz
 index.faiss
