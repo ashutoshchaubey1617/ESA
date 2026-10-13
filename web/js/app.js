@@ -224,12 +224,26 @@
 
     if (btnAshutosh) {
       btnAshutosh.addEventListener("click", () => {
+        const restrictedAlert = document.getElementById("faceid-restricted-alert");
+        if (restrictedAlert) restrictedAlert.classList.add("hidden");
+        fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Ashutosh" }),
+        }).catch(console.warn);
         startBiometricAuthenticationSequence("ashutosh");
       });
     }
 
     if (btnDhrunil) {
       btnDhrunil.addEventListener("click", () => {
+        const restrictedAlert = document.getElementById("faceid-restricted-alert");
+        if (restrictedAlert) restrictedAlert.classList.add("hidden");
+        fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Dhrunil" }),
+        }).catch(console.warn);
         startBiometricAuthenticationSequence("dhrunil");
       });
     }
@@ -268,7 +282,7 @@
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 480 }, height: { ideal: 360 }, facingMode: "user" },
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
         audio: false,
       });
       video.srcObject = stream;
@@ -281,31 +295,43 @@
 
   function startFaceIdLiveCheck(video) {
     const offscreen = document.createElement("canvas");
-    offscreen.width = 320;
-    offscreen.height = 240;
+    offscreen.width = 640;
+    offscreen.height = 480;
     const offCtx = offscreen.getContext("2d");
 
     let isRequestInFlight = false;
+    let consecutiveUnknownCount = 0;
+
     setInterval(async () => {
       if (!faceIdState.isLocked || faceIdState.isAuthenticating || isRequestInFlight) return;
       if (video.readyState < 2) return;
 
       try {
         isRequestInFlight = true;
+        const vw = video.videoWidth || 640;
+        const vh = video.videoHeight || 480;
+        offscreen.width = 640;
+        offscreen.height = Math.round(640 * (vh / vw)) || 480;
         offCtx.drawImage(video, 0, 0, offscreen.width, offscreen.height);
-        const b64 = offscreen.toDataURL("image/jpeg", 0.65);
+        const b64 = offscreen.toDataURL("image/jpeg", 0.82);
 
         const resp = await fetch("/api/auth/login-by-face", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: b64, recognition_thresh: 0.40 }),
+          body: JSON.stringify({ image: b64, recognition_thresh: 0.35 }),
         });
         const data = await resp.json();
 
         if (data.authenticated && data.success && data.user) {
+          consecutiveUnknownCount = 0;
           startBiometricAuthenticationSequence(data.user.name.toLowerCase());
         } else if (data.reason === "UNREGISTERED_USER") {
-          showFaceIdRestrictedWarning();
+          consecutiveUnknownCount++;
+          if (consecutiveUnknownCount >= 3) {
+            showFaceIdRestrictedWarning();
+          }
+        } else {
+          consecutiveUnknownCount = 0;
         }
       } catch (e) {
         // Silently continue scanning
@@ -316,10 +342,11 @@
   }
 
   function startBiometricAuthenticationSequence(personKey) {
-    if (faceIdState.isAuthenticating || !faceIdState.isLocked) return;
+    if (faceIdState.isAuthenticating) return;
 
     const person = ENROLLED_PERSONNEL[personKey.toLowerCase()] || ENROLLED_PERSONNEL.ashutosh;
     faceIdState.isAuthenticating = true;
+    faceIdState.isLocked = false;
 
     const progressContainer = document.getElementById("faceid-progress-container");
     const restrictedAlert = document.getElementById("faceid-restricted-alert");
@@ -456,7 +483,7 @@
   }
 
   function showFaceIdRestrictedWarning() {
-    if (faceIdState.isAuthenticating) return;
+    if (faceIdState.isAuthenticating || !faceIdState.isLocked) return;
 
     const progressContainer = document.getElementById("faceid-progress-container");
     const restrictedAlert = document.getElementById("faceid-restricted-alert");
@@ -1236,20 +1263,24 @@
 
     const ctx = overlay.getContext("2d");
     const offscreen = document.createElement("canvas");
-    offscreen.width = 320;
-    offscreen.height = 240;
+    offscreen.width = 640;
+    offscreen.height = 480;
     const offCtx = offscreen.getContext("2d");
 
     // Processing loop (~6 FPS to minimize bandwidth / CPU)
     state.webcam.intervalId = setInterval(async () => {
       if (!state.webcam.active || video.readyState < 2) return;
 
-      overlay.width = video.videoWidth || 640;
-      overlay.height = video.videoHeight || 480;
+      const vw = video.videoWidth || 640;
+      const vh = video.videoHeight || 480;
+      overlay.width = vw;
+      overlay.height = vh;
 
-      // Draw current video frame to offscreen canvas
-      offCtx.drawImage(video, 0, 0, 320, 240);
-      const base64Image = offscreen.toDataURL("image/jpeg", 0.7);
+      // Draw current video frame to offscreen canvas (crisp 640px wide)
+      offscreen.width = 640;
+      offscreen.height = Math.round(640 * (vh / vw)) || 480;
+      offCtx.drawImage(video, 0, 0, offscreen.width, offscreen.height);
+      const base64Image = offscreen.toDataURL("image/jpeg", 0.80);
 
       const t0 = performance.now();
       try {
@@ -1257,7 +1288,7 @@
         const res = await fetch("/api/face/process", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: base64Image, recognition_thresh: 0.40, return_annotated: true }),
+          body: JSON.stringify({ image: base64Image, recognition_thresh: 0.35, return_annotated: true }),
         });
 
         const latency = Math.round(performance.now() - t0);
@@ -1269,7 +1300,7 @@
           const detections = data.detections || [];
           renderFaceDetections(ctx, overlay.width, overlay.height, detections);
 
-          // Handle Apple Face ID Gate profile recognition
+          // Handle Apple Face ID Gate profile recognition if gate is currently locked
           if (faceIdState.isLocked && !faceIdState.isAuthenticating && detections.length > 0) {
             const topDet = detections[0];
             const nameLower = (topDet.name || "").toLowerCase();
@@ -1279,8 +1310,6 @@
               startBiometricAuthenticationSequence("ashutosh");
             } else if (isLive && (nameLower.includes("dhrunil") || nameLower === "dhrunil")) {
               startBiometricAuthenticationSequence("dhrunil");
-            } else if (!topDet.is_known || nameLower.includes("unknown") || nameLower === "") {
-              showFaceIdRestrictedWarning();
             }
           }
         } else {

@@ -143,17 +143,43 @@ class FaceService:
             self.status_message = f"Initialization error: {str(e)}"
 
     def reload_known_faces(self):
-        """Loads enrolled participant embeddings from database into memory."""
+        """Loads enrolled participant embeddings from database and feature.npz multi-templates into memory."""
         participants = self.db.get_all_participants()
         names = []
         embeddings = []
         self.participant_id_map.clear()
 
+        # 1. Map participants from SQLite database
         for p in participants:
+            self.participant_id_map[p["name"]] = p["participant_id"]
             if p.get("embedding") is not None and len(p["embedding"]) > 0:
                 names.append(p["name"])
                 embeddings.append(p["embedding"])
-                self.participant_id_map[p["name"]] = p["participant_id"]
+
+        # 2. Also load multi-template gallery from datasets/face_features/feature.npz
+        feat_path = "datasets/face_features/feature.npz"
+        if not os.path.exists(feat_path):
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            alt_feat = os.path.join(base_dir, feat_path)
+            if os.path.exists(alt_feat):
+                feat_path = alt_feat
+
+        if os.path.exists(feat_path):
+            try:
+                npz_data = np.load(feat_path, allow_pickle=True)
+                npz_names = list(npz_data["images_name"])
+                npz_embs = npz_data["images_emb"]
+                for n, e in zip(npz_names, npz_embs):
+                    c_name = str(n).strip().capitalize()
+                    names.append(c_name)
+                    embeddings.append(e)
+                    if c_name not in self.participant_id_map:
+                        for p in participants:
+                            if p["name"].lower() == c_name.lower():
+                                self.participant_id_map[c_name] = p["participant_id"]
+                                break
+            except Exception as e:
+                logger.warning(f"Could not load multi-templates from {feat_path}: {e}")
 
         self.known_names = names
         if embeddings:
@@ -240,13 +266,13 @@ class FaceService:
         if v_face_len > 1e-6:
             u_face = v_face / v_face_len
             t_nose = float(np.dot(nose - eye_center, u_face) / v_face_len)
-            ordered_vertical = 0.15 <= t_nose <= 0.85
+            ordered_vertical = (-0.10 <= t_nose <= 1.15)
         else:
-            ordered_vertical = False
+            ordered_vertical = True
 
-        # Biological plausibility boundaries for human facial geometry
-        emr_plausible = 0.30 <= emr <= 1.55
-        mer_plausible = 0.28 <= mer <= 1.45
+        # Biological plausibility boundaries for human facial geometry (accommodating pitch/yaw & perspective)
+        emr_plausible = (0.10 <= emr <= 4.2)
+        mer_plausible = (0.15 <= mer <= 2.8)
         is_plausible = emr_plausible and mer_plausible and ordered_vertical
 
         return {
@@ -319,12 +345,12 @@ class FaceService:
         internal_dynamic_var = 0.5 * (emr_var + mer_var)
 
         # Micro-motion analysis & Anti-spoofing decision tree
-        if not geom["is_plausible"]:
-            # Distorted geometry (e.g. paper cutout, folded mask, extreme non-face artifact)
+        if not geom["is_plausible"] and history_len >= 8:
+            # Distorted geometry sustained over multiple frames (e.g. paper cutout, folded mask, extreme non-face artifact)
             score = 0.20
             status = "UNNATURAL_GEOMETRY"
             is_live = False
-        elif history_len >= 12 and internal_dynamic_var < 1.5e-6:
+        elif history_len >= 12 and internal_dynamic_var < 1.0e-6:
             # Static photo attack: natural human physiological tremor/micro-expression is absent
             score = 0.15
             status = "ATTACK_SUSPECTED"
@@ -334,9 +360,9 @@ class FaceService:
             score = 0.60
             status = "EXTREME_HEAD_ANGLE"
             is_live = True
-        elif history_len < 8:
+        elif history_len < 6:
             # Initial accumulation phase
-            score = 0.50
+            score = 0.55
             status = "ANALYZING"
             is_live = True
         else:

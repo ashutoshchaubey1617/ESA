@@ -495,7 +495,7 @@ app.add_middleware(
 
 class FaceProcessRequest(BaseModel):
     image: str = Field(..., description="Base64 encoded camera frame or Data URL")
-    recognition_thresh: float = Field(0.40, ge=0.0, le=1.0)
+    recognition_thresh: float = Field(0.35, ge=0.0, le=1.0)
     return_annotated: bool = Field(True, description="Whether to return annotated base64 frame")
 
 
@@ -507,7 +507,7 @@ class FaceEnrollRequest(BaseModel):
 
 class FaceLoginRequest(BaseModel):
     image: str = Field(..., description="Base64 encoded camera frame or Data URL")
-    recognition_thresh: float = Field(0.40, ge=0.0, le=1.0)
+    recognition_thresh: float = Field(0.35, ge=0.0, le=1.0)
 
 
 class DirectLoginRequest(BaseModel):
@@ -737,22 +737,25 @@ async def login_by_face(req: FaceLoginRequest):
 
     primary = detections[0]
 
-    # Anti-spoofing check
+    name = primary.get("name", "").strip()
+    is_authorized_name = name.lower() in AUTHORIZED_PARTICIPANTS
+
+    # Anti-spoofing check: only block if explicitly confirmed attack
     liveness = primary.get("liveness", {})
-    if not liveness.get("is_live", True):
+    liveness_status = liveness.get("status", "ANALYZING")
+    if liveness_status == "ATTACK_SUSPECTED":
         return JSONResponse(
             status_code=403,
             content={
                 "success": False,
                 "authenticated": False,
                 "reason": "SPOOF_DETECTED",
-                "message": "Liveness check failed. Biometric spoofing suspected.",
+                "message": "Liveness check failed. Biometric photo attack suspected.",
                 "detection": sanitize_json(primary)
             }
         )
 
-    name = primary.get("name", "")
-    if name.lower() not in AUTHORIZED_PARTICIPANTS:
+    if not is_authorized_name:
         return JSONResponse(
             status_code=403,
             content={
