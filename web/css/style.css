@@ -1,0 +1,255 @@
+/* ==========================================================================
+   ESA Clinical Multimodal Telemetry - Dark Medical Tech Design System
+   ========================================================================== */
+
+:root {
+  --bg-app: #06080e;
+  --bg-sidebar: #090d16;
+  --bg-card: rgba(13, 19, 32, 0.85);
+  --bg-card-hover: rgba(19, 28, 48, 0.9);
+  --bg-glass: rgba(15, 23, 42, 0.65);
+  
+  --border-subtle: rgba(56, 189, 248, 0.12);
+  --border-bright: rgba(56, 189, 248, 0.35);
+  --border-glow: rgba(0, 255, 136, 0.4);
+
+  --color-ecg: #00ff88;
+  --color-ecg-glow: rgba(0, 255, 136, 0.5);
+  --color-ppg-ir: #00f0ff;
+  --color-ppg-ir-glow: rgba(0, 240, 255, 0.5);
+  --color-ppg-red: #ff3366;
+  --color-ppg-red-glow: rgba(255, 51, 102, 0.5);
+  --color-spo2: #38bdf8;
+  --color-bp: #a855f7;
+  
+  --color-alarm: #ef4444;
+  --color-alarm-bg: rgba(239, 68, 68, 0.15);
+  --color-warning: #f59e0b;
+  --color-warning-bg: rgba(245, 158, 11, 0.15);
+  --color-success: #10b981;
+  --color-success-bg: rgba(16, 185, 129, 0.15);
+  
+  --font-hud: "Exo", "Segoe UI", -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Roboto Mono", monospace;
+}
+
+/* Base Body & Reset */
+body {
+  background-color: var(--bg-app);
+  color: #e2e8f0;
+  font-family: var(--font-hud);
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(0, 255, 136, 0.04) 0%, transparent 40%);
+  background-attachment: fixed;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.25);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.5);
+}
+
+/* Glassmorphic Panels */
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.glass-panel:hover {
+  border-color: var(--border-bright);
+}
+
+.glass-panel-glow {
+  box-shadow: 0 0 20px -5px rgba(0, 255, 136, 0.15);
+}
+
+/* Monospace Numbers */
+.hud-mono {
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+/* Oscilloscope Screen Bezel */
+.scope-bezel {
+  position: relative;
+  background: #080c14;
+  border: 2px solid #1e293b;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8), 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+.scope-bezel::after {
+  content: " ";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.25) 50%
+  );
+  background-size: 100% 4px;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+.scope-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Cardiac R-Peak Heartbeat Animation */
+@keyframes heart-thump {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
+  15% { transform: scale(1.35); filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.9)); }
+  30% { transform: scale(1.1); filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.5)); }
+  45% { transform: scale(1.25); filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.7)); }
+  70% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
+  100% { transform: scale(1); }
+}
+
+.animate-heartbeat {
+  animation: heart-thump 0.75s ease-in-out;
+}
+
+/* Pulsing Status Rings */
+.status-dot-pulse {
+  position: relative;
+}
+.status-dot-pulse::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+  opacity: 0.75;
+}
+
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+/* Active Nav Item */
+.nav-item.active {
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.2) 0%, rgba(56, 189, 248, 0.04) 100%);
+  border-left: 3px solid #38bdf8;
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+/* Custom Range Sliders */
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: #1e293b;
+  border-radius: 3px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #38bdf8;
+  border: 2px solid #0f172a;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.7);
+  transition: transform 0.15s ease;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Medical Toggle Switch */
+.toggle-checkbox:checked {
+  right: 0;
+  border-color: #10b981;
+}
+.toggle-checkbox:checked + .toggle-label {
+  background-color: #10b981;
+}
+
+/* Video Face Overlay Container */
+.webcam-box {
+  position: relative;
+  background: #090d16;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.webcam-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1); /* Mirror camera for natural feel */
+}
+
+.webcam-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Face Target Reticle Corners */
+.corner-bracket {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: #00ff88;
+  pointer-events: none;
+}
+.corner-tl { top: 12px; left: 12px; border-top: 2px solid; border-left: 2px solid; }
+.corner-tr { top: 12px; right: 12px; border-top: 2px solid; border-right: 2px solid; }
+.corner-bl { bottom: 12px; left: 12px; border-bottom: 2px solid; border-left: 2px solid; }
+.corner-br { bottom: 12px; right: 12px; border-bottom: 2px solid; border-right: 2px solid; }
+
+/* Print Styles for Clinical Reports */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  aside, #nav-sidebar, .no-print {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+  .glass-panel {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+  }
+}
