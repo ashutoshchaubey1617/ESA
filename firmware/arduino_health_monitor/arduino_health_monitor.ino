@@ -182,6 +182,24 @@ void setup() {
     }
   } else {
     Serial.println(F("STATUS,SENSOR,MAX_NOT_FOUND_CHECK_A4_A5_VCC"));
+    Serial.println(F("STATUS,DIAGNOSTIC,SCANNING_ALL_I2C_ADDRESSES..."));
+    int nDevices = 0;
+    for (byte address = 1; address < 127; address++) {
+      Wire.beginTransmission(address);
+      byte error = Wire.endTransmission();
+      if (error == 0) {
+        Serial.print(F("STATUS,FOUND_I2C_DEVICE_AT_ADDR,0x"));
+        if (address < 16) Serial.print("0");
+        Serial.println(address, HEX);
+        nDevices++;
+      }
+    }
+    if (nDevices == 0) {
+      Serial.println(F("STATUS,RESULT,ZERO_I2C_DEVICES_FOUND_ON_BUS"));
+      Serial.println(F("DIAGNOSTIC_TIP_1: Check if SDA is in ANALOG A4 and SCL is in ANALOG A5 (not D4/D5!)"));
+      Serial.println(F("DIAGNOSTIC_TIP_2: Try moving VIN from 3.3V to 5V (many breakout boards require 5V)"));
+      Serial.println(F("DIAGNOSTIC_TIP_3: Ensure GND wire has solid contact"));
+    }
   }
   Serial.println(F("STATUS,AD8232,ANALOG_A0_READY"));
 
