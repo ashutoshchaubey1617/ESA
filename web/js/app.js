@@ -1037,8 +1037,24 @@
     }
   }
 
+  let lastRawEcg = null;
+  let ecgDcBaseline = 512.0;
+
   function feedSampleToScopes(s) {
-    const ecgVal = s.ecg !== undefined ? s.ecg : ((s.ecg_raw || 512) - 512) / 120.0;
+    const rawVal = s.ecg_raw !== undefined ? s.ecg_raw : (s.ecg !== undefined ? s.ecg * 120.0 + 512.0 : 512.0);
+
+    // 50 Hz powerline notch filter for 100 Hz sampling rate: y[n] = 0.5 * (x[n] + x[n-1])
+    let notchedRaw = rawVal;
+    if (lastRawEcg !== null) {
+      notchedRaw = 0.5 * (rawVal + lastRawEcg);
+    }
+    lastRawEcg = rawVal;
+
+    // Remove slow DC offset / baseline wander
+    ecgDcBaseline = 0.98 * ecgDcBaseline + 0.02 * notchedRaw;
+    const centeredEcg = notchedRaw - ecgDcBaseline;
+
+    const ecgVal = s.ecg !== undefined ? s.ecg : (centeredEcg / 120.0);
     const ppgRedVal = s.ppg_red_norm !== undefined ? s.ppg_red_norm : ((s.ppg_red || 20000) - 20000) / 4000.0;
     const ppgIrVal = s.ppg_ir_norm !== undefined ? s.ppg_ir_norm : ((s.ppg_ir || 24000) - 24000) / 4000.0;
 
