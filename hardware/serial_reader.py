@@ -69,6 +69,30 @@ class SerialManager:
             )
         return result
 
+    @classmethod
+    def auto_detect_arduino_port(cls) -> Optional[str]:
+        """Detects Arduino Uno or compatible USB serial device port."""
+        ports = serial.tools.list_ports.comports()
+        # Pass 1: Look for explicit Arduino Uno VID:PID or Arduino in description
+        for p in ports:
+            desc = (p.description or "").lower()
+            hwid = (p.hwid or "").lower()
+            if "2341:0043" in hwid or "arduino" in desc:
+                return p.device
+        # Pass 2: Look for common USB-UART bridges (CH340, CP210x, FTDI)
+        for p in ports:
+            desc = (p.description or "").lower()
+            hwid = (p.hwid or "").lower()
+            if "ch340" in desc or "cp210" in desc or "ftdi" in desc or "1a86:7523" in hwid:
+                return p.device
+        # Pass 3: Any non-Bluetooth USB serial device
+        for p in ports:
+            hwid = (p.hwid or "").lower()
+            desc = (p.description or "").lower()
+            if "bthenum" not in hwid and "bluetooth" not in desc and "usb" in hwid:
+                return p.device
+        return None
+
     def start(self):
         """Starts background data collection thread."""
         if self._running:
@@ -163,23 +187,29 @@ class SerialManager:
     def _serial_worker(self):
         """Worker thread for physical serial connection."""
         while self._running:
-            if not self.port:
-                self.connection_status = "ERROR"
-                self.last_error = "No serial port configured"
-                time.sleep(1.0)
-                continue
+            target_port = self.port
+            if not target_port or target_port == "AUTO":
+                target_port = self.auto_detect_arduino_port()
+                if not target_port:
+                    self.connection_status = "ERROR"
+                    self.last_error = "No serial port configured or Arduino not detected"
+                    time.sleep(1.0)
+                    continue
 
             try:
                 self.connection_status = "CONNECTING"
-                self._serial = serial.Serial(self.port, self.baudrate, timeout=1.0)
+                self._serial = serial.Serial(target_port, self.baudrate, timeout=1.0)
                 time.sleep(1.5)  # Allow Arduino DTR reset stabilization
                 self.connection_status = "CONNECTED"
                 self.last_error = ""
 
                 # Handshake
-                self._serial.write(b"START\n")
+                try:
+                    self._serial.write(b"START\n")
+                except Exception:
+                    pass
 
-                while self._running and self._serial.is_open:
+                while self._running and self._serial and self._serial.is_open:
                     raw_line = self._serial.readline()
                     if not raw_line:
                         continue

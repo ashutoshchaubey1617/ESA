@@ -1212,9 +1212,12 @@ def export_metrics(session_id: str):
 @app.get("/api/settings/serial")
 def get_serial_settings():
     """Retrieves current hardware serial and simulation configuration."""
+    detected = SerialManager.auto_detect_arduino_port()
     return {
         "available_ports": SerialManager.list_available_ports(),
+        "detected_port": detected,
         "port": state.serial_mgr.port,
+        "active_port": state.serial_mgr.port or detected,
         "baudrate": state.serial_mgr.baudrate,
         "mock_mode": state.serial_mgr.mock_mode,
         "connection_status": state.serial_mgr.connection_status,
@@ -1244,9 +1247,14 @@ def update_serial_settings(req: SerialSettingsRequest):
         fc = req.sim_finger_contact if req.sim_finger_contact is not None else state.serial_mgr._sim_finger_contact
         state.serial_mgr.set_simulator_controls(heart_rate=hr, leads_off=lo, finger_contact=fc)
 
-    if req.connect is True and not state.serial_mgr.mock_mode:
+    if req.connect is True:
+        if state.serial_mgr.mock_mode:
+            state.serial_mgr.set_mock_mode(False)
+        else:
+            state.serial_mgr.stop()
+            state.serial_mgr.start()
+    elif req.connect is False:
         state.serial_mgr.stop()
-        state.serial_mgr.start()
 
     return get_serial_settings()
 

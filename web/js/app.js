@@ -2407,6 +2407,9 @@
                 const opt = document.createElement("option");
                 opt.value = p.device;
                 opt.textContent = `${p.device} - ${p.description || "Serial Port"}`;
+                if (data.detected_port && p.device === data.detected_port) {
+                  opt.selected = true;
+                }
                 select.appendChild(opt);
               });
             }
@@ -2417,6 +2420,68 @@
           btnScan.innerHTML = '<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Scan';
           initLucideIcons();
         }
+      });
+    }
+
+    // Hardware Connect Serial Button
+    const btnConnectSerial = document.getElementById("btn-connect-serial");
+    if (btnConnectSerial) {
+      btnConnectSerial.addEventListener("click", async () => {
+        const portSelect = document.getElementById("select-serial-port");
+        const baudSelect = document.getElementById("select-baudrate");
+        const portVal = portSelect ? portSelect.value : "COM5";
+        const baudVal = baudSelect ? parseInt(baudSelect.value) : 115200;
+
+        btnConnectSerial.textContent = "Connecting...";
+        try {
+          const res = await fetch("/api/settings/serial", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              port: portVal,
+              baudrate: baudVal,
+              mock_mode: false,
+              connect: true,
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const toggleMock = document.getElementById("toggle-mock-mode");
+            if (toggleMock) toggleMock.checked = false;
+            btnConnectSerial.textContent = `Connected (${data.active_port || portVal})`;
+            setTimeout(() => {
+              btnConnectSerial.textContent = "Connect Hardware Serial";
+            }, 3000);
+          }
+        } catch (err) {
+          btnConnectSerial.textContent = "Connection Failed";
+          setTimeout(() => {
+            btnConnectSerial.textContent = "Connect Hardware Serial";
+          }, 3000);
+        }
+      });
+    }
+
+    // Hardware Disconnect Serial Button
+    const btnDisconnectSerial = document.getElementById("btn-disconnect-serial");
+    if (btnDisconnectSerial) {
+      btnDisconnectSerial.addEventListener("click", async () => {
+        try {
+          await fetch("/api/settings/serial", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              connect: false,
+              mock_mode: true,
+            }),
+          });
+          const toggleMock = document.getElementById("toggle-mock-mode");
+          if (toggleMock) toggleMock.checked = true;
+          btnDisconnectSerial.textContent = "Disconnected";
+          setTimeout(() => {
+            btnDisconnectSerial.textContent = "Disconnect";
+          }, 2000);
+        } catch (err) {}
       });
     }
 

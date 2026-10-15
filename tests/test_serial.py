@@ -96,6 +96,14 @@ def test_port_discovery():
         assert "hwid" in p
 
 
+def test_auto_detect_arduino_port():
+    detected = SerialManager.auto_detect_arduino_port()
+    # On the physical machine with Arduino connected, it will be COM5, or a string/None
+    if detected is not None:
+        assert isinstance(detected, str)
+        assert detected.startswith("COM") or detected.startswith("/dev/")
+
+
 def test_simulator_controls(serial_mgr):
     # Test setting heart rate, leads off, and finger contact
     serial_mgr.set_simulator_controls(heart_rate=120.0, leads_off=1, finger_contact=False)
