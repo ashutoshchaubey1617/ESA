@@ -37,8 +37,8 @@ class MedicalOscilloscope {
       this.addChannel({
         id: "ch1",
         name: "LEAD II",
-        color: "#10b981",
-        glowColor: "rgba(16, 185, 129, 0.2)",
+        color: "#15803d",
+        glowColor: "transparent",
         gain: 1.0,
       });
     }
@@ -78,8 +78,8 @@ class MedicalOscilloscope {
     const ch = {
       id: config.id || `ch_${this.channels.length + 1}`,
       name: config.name || `CHANNEL ${this.channels.length + 1}`,
-      color: config.color || "#10b981",
-      glowColor: config.glowColor || "rgba(16, 185, 129, 0.2)",
+      color: config.color || "#15803d",
+      glowColor: config.glowColor || "transparent",
       gain: config.gain || 1.0,
       offsetY: config.offsetY || 0, // baseline offset relative to center (-1 to 1)
       visible: config.visible !== undefined ? config.visible : true,
@@ -428,9 +428,9 @@ class MedicalOscilloscope {
 
     // Subtle Apple-style vertical cursor line
     const gradient = ctx.createLinearGradient(eraseX, 0, eraseX + 4, 0);
-    gradient.addColorStop(0, "rgba(16, 185, 129, 0.75)");
-    gradient.addColorStop(0.3, "rgba(16, 185, 129, 0.25)");
-    gradient.addColorStop(1, "rgba(16, 185, 129, 0)");
+    gradient.addColorStop(0, "rgba(21, 128, 61, 0.75)");
+    gradient.addColorStop(0.3, "rgba(21, 128, 61, 0.25)");
+    gradient.addColorStop(1, "rgba(21, 128, 61, 0)");
 
     ctx.fillStyle = gradient;
     ctx.fillRect(eraseX - 2, 0, 8, h);
@@ -476,19 +476,19 @@ class MedicalOscilloscope {
   _drawAlertOverlay(ctx, w, h, message) {
     ctx.save();
     // Translucent alert background
-    ctx.fillStyle = "rgba(244, 63, 94, 0.08)";
+    ctx.fillStyle = "rgba(190, 18, 60, 0.08)";
     ctx.fillRect(0, 0, w, h);
 
     // Pulsing central alert badge
     const pulse = (Math.sin(performance.now() * 0.006) + 1) * 0.5;
-    ctx.strokeStyle = `rgba(244, 63, 94, ${0.4 + pulse * 0.4})`;
+    ctx.strokeStyle = `rgba(190, 18, 60, ${0.4 + pulse * 0.4})`;
     ctx.lineWidth = 1.5;
     ctx.strokeRect(w * 0.15, h * 0.35, w * 0.7, h * 0.3);
 
     ctx.fillStyle = `rgba(17, 24, 39, 0.92)`;
     ctx.fillRect(w * 0.15 + 1, h * 0.35 + 1, w * 0.7 - 2, h * 0.3 - 2);
 
-    ctx.fillStyle = "#f43f5e";
+    ctx.fillStyle = "#be123c";
     ctx.font = '600 13px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif';
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -528,11 +528,11 @@ class MedicalOscilloscope {
     const badgeY = Math.max(20, Math.min(h - 24, pos.y - 8));
 
     ctx.fillStyle = "rgba(17, 24, 39, 0.92)";
-    ctx.strokeStyle = "rgba(59, 130, 246, 0.5)";
+    ctx.strokeStyle = "rgba(29, 78, 216, 0.5)";
     ctx.fillRect(badgeX, badgeY - 14, textWidth, 20);
     ctx.strokeRect(badgeX, badgeY - 14, textWidth, 20);
 
-    ctx.fillStyle = "#3b82f6";
+    ctx.fillStyle = "#1d4ed8";
     ctx.textAlign = "left";
     ctx.fillText(text, badgeX + 6, badgeY);
 

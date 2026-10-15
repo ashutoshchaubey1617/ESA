@@ -18,23 +18,34 @@
       theme: {
         extend: {
           colors: {
-            app: '#F8FAFC',
-            sidebar: '#FFFFFF',
+            app: '#F6F5EE',
+            sidebar: '#F6F5EE',
             card: '#FFFFFF',
-            cardMuted: '#F1F5F9',
-            appleBlue: '#2563EB',
-            appleEmerald: '#059669',
-            appleAmber: '#D97706',
-            appleCoral: '#E11D48',
-            applePurple: '#7C3AED',
-            slateText: '#0F172A',
-            slateMuted: '#64748B',
-            borderSubtle: '#E2E8F0',
-            borderMedium: '#CBD5E1'
+            cardMuted: '#FAF9F5',
+            pill: '#F6F5EE',
+            hover: '#EFECE3',
+            borderSubtle: '#ECE8DF',
+            borderMedium: '#DDD8CC',
+            pitchBlack: '#18181B',
+            taupeText: '#59554E',
+            taupeMuted: '#78736B',
+            forest: '#15803D',
+            amber: '#B45309',
+            berry: '#BE123C',
+            blue: '#1D4ED8',
+            airbnbCharcoal: '#18181B',
+            airbnbGray: '#59554E',
+            airbnbBorder: '#ECE8DF',
+            airbnbBorderMedium: '#DDD8CC',
+            appleEmerald: '#15803D',
+            appleAmber: '#B45309',
+            appleCoral: '#BE123C',
+            slateText: '#18181B',
+            slateMuted: '#78736B'
           },
           fontFamily: {
-            sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'Inter', 'sans-serif'],
-            mono: ['SF Mono', 'JetBrains Mono', 'Menlo', 'monospace']
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'sans-serif'],
+            mono: ['JetBrains Mono', 'SF Mono', 'Menlo', 'monospace']
           }
         }
       }
@@ -47,28 +58,32 @@
   <!-- Custom Apple Health / Airbnb Design System CSS -->
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="bg-app text-slate-800 min-h-screen flex antialiased select-none font-sans">
+<body class="bg-[#F6F5EE] text-[#18181B] min-h-screen flex antialiased select-none font-sans">
 
   <!-- =========================================================================
-       APPLE FACE ID LOGIN GATE MODAL (LIGHT THEME - INITIAL STATE: LOCKED)
+       BIOMETRICS GATE MODAL (WARM EDITORIAL LIGHT THEME - INITIAL STATE: LOCKED)
        ========================================================================= -->
   <div id="faceid-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <div class="faceid-card space-y-6">
+    <div class="faceid-card rounded-3xl space-y-6">
       
-      <!-- Top Apple Face ID Glyph & Title Header -->
-      <div class="text-center space-y-2">
-        <div class="w-14 h-14 mx-auto rounded-2xl bg-blue-50 border border-blue-200/80 flex items-center justify-center text-appleBlue shadow-sm">
-          <i data-lucide="scan-face" class="w-8 h-8 stroke-[1.75]"></i>
+      <!-- Top Close / Guest Skip Button -->
+      <button id="btn-faceid-close" class="absolute top-5 right-5 w-8 h-8 rounded-full border border-[#DDD8CC] hover:bg-[#F6F5EE] flex items-center justify-center text-[#59554E] hover:text-[#18181B] transition-colors" title="Continue as Guest">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Top Character Glyph & Title Header -->
+      <div class="text-center space-y-1.5 pt-1">
+        <div class="w-12 h-12 mx-auto rounded-2xl bg-[#18181B] flex items-center justify-center text-white shadow-xs mb-3">
+          <i data-lucide="scan-face" class="w-6 h-6 stroke-[2]"></i>
         </div>
         <div>
-          <h2 class="text-lg font-bold tracking-tight text-slate-900">Face ID & Biometrics Gate</h2>
-          <p id="faceid-status-text" class="text-xs text-slate-500 font-normal">Position your face within the frame to authenticate</p>
+          <h2 class="text-lg font-bold tracking-tight text-[#18181B]">Biometric Identity Gate</h2>
+          <p id="faceid-status-text" class="text-xs text-[#59554E] font-normal">Position your face within the frame to authenticate</p>
         </div>
       </div>
 
       <!-- Live Webcam Face ID Aperture with Circular Reticle -->
       <div class="faceid-aperture">
-        <div class="faceid-ambient-glow"></div>
         <video id="faceid-video" class="faceid-webcam" autoplay playsinline muted></video>
         <canvas id="faceid-canvas" class="faceid-overlay"></canvas>
         <div id="faceid-reticle" class="faceid-reticle-ring scanning"></div>
@@ -78,50 +93,50 @@
       <div id="faceid-progress-container" class="hidden text-center space-y-3">
         <div class="flex items-center justify-center space-x-3">
           <svg class="w-10 h-10" viewBox="0 0 36 36">
-            <path class="text-slate-200" stroke-width="3" stroke="currentColor" fill="none"
+            <path class="text-[#ECE8DF]" stroke-width="3" stroke="currentColor" fill="none"
               d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-            <path id="faceid-progress-circle" class="progress-ring-circle text-emerald-600" stroke-width="3"
+            <path id="faceid-progress-circle" class="progress-ring-circle text-[#15803D]" stroke-width="3"
               stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-linecap="round" stroke="currentColor" fill="none"
               d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
           </svg>
           <div class="text-left">
-            <div id="faceid-phase-message" class="text-xs font-semibold text-slate-800">Authenticating Identity...</div>
-            <div id="faceid-progress-text" class="text-[11px] font-mono text-emerald-600 font-medium">0% Synchronized</div>
+            <div id="faceid-phase-message" class="text-xs font-semibold text-[#18181B]">Authenticating Identity...</div>
+            <div id="faceid-progress-text" class="text-[11px] font-mono text-[#15803D] font-medium">0% Synchronized</div>
           </div>
         </div>
       </div>
 
-      <!-- Access Warning Card (Apple Clean Alert for Unknown / Unregistered Subjects) -->
+      <!-- Access Warning Card (Alert for Unknown / Unregistered Subjects) -->
       <div id="faceid-restricted-alert" class="hidden apple-alert-restricted">
         <div class="flex items-start space-x-2.5">
-          <i data-lucide="shield-alert" class="w-4 h-4 text-appleCoral shrink-0 mt-0.5"></i>
+          <i data-lucide="shield-alert" class="w-4 h-4 text-[#B45309] shrink-0 mt-0.5"></i>
           <div>
-            <span class="font-semibold block text-rose-900 mb-0.5">Access Restricted</span>
-            <span class="text-rose-800">Vital calculations are exclusively enabled for verified enrolled personnel (Ashutosh & Dhrunil). Unregistered subject.</span>
+            <span class="font-semibold block text-[#92400E] mb-0.5">Unregistered Subject Detected</span>
+            <span class="text-[#B45309]">Vital calculations are calibrated for enrolled personnel (Ashutosh & Dhrunil). Continue as Guest or authenticate below.</span>
           </div>
         </div>
       </div>
 
       <!-- Quick Personnel Switcher / Simulation Pills for Evaluation & Seamless Testing -->
-      <div class="pt-3 border-t border-slate-200 space-y-2">
-        <div class="text-[11px] font-semibold text-slate-500 text-center uppercase tracking-wider">
+      <div class="pt-3 border-t border-[#ECE8DF] space-y-2.5">
+        <div class="text-[11px] font-semibold text-[#78736B] text-center uppercase tracking-wider">
           Enrolled Personnel Verification
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <button id="btn-faceid-ashutosh" class="apple-btn apple-btn-secondary py-2 text-xs text-slate-800 hover:text-blue-600 hover:border-blue-300">
-            <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-[10px]">AS</span>
+          <button id="btn-faceid-ashutosh" class="warm-btn warm-btn-secondary py-2 text-xs flex items-center justify-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-[#18181B] text-white flex items-center justify-center font-bold text-[10px]">AS</span>
             <span>Ashutosh (Lead)</span>
           </button>
-          <button id="btn-faceid-dhrunil" class="apple-btn apple-btn-secondary py-2 text-xs text-slate-800 hover:text-emerald-600 hover:border-emerald-300">
-            <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px]">DH</span>
+          <button id="btn-faceid-dhrunil" class="warm-btn warm-btn-secondary py-2 text-xs flex items-center justify-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-[#15803D] text-white flex items-center justify-center font-bold text-[10px]">DH</span>
             <span>Dhrunil (Architect)</span>
           </button>
         </div>
         <div class="flex gap-2">
-          <button id="btn-faceid-unknown" class="flex-1 apple-btn apple-btn-secondary py-1.5 text-[11px] text-slate-600 hover:text-rose-600">
-            <i data-lucide="user-x" class="w-3.5 h-3.5"></i> Test Unknown Subject
+          <button id="btn-faceid-unknown" class="flex-1 warm-btn warm-btn-secondary py-2 text-xs text-[#59554E] hover:text-[#18181B]">
+            <i data-lucide="user-x" class="w-3.5 h-3.5"></i> Test Unknown
           </button>
-          <button id="btn-faceid-bypass" class="apple-btn apple-btn-secondary px-3 py-1.5 text-[11px] text-slate-600 hover:text-slate-900" title="Bypass for Guest Review">
+          <button id="btn-faceid-bypass" class="warm-btn warm-btn-primary px-4 py-2 text-xs" title="Enter Cockpit as Guest">
             Guest Bypass
           </button>
         </div>
@@ -131,95 +146,91 @@
   </div>
 
   <!-- =========================================================================
-       SIDEBAR NAVIGATION (APPLE / AIRBNB CLEAN LIGHT STYLE)
+       SIDEBAR NAVIGATION (GULLAK WARM EDITORIAL STYLE)
        ========================================================================= -->
-  <aside id="nav-sidebar" class="w-64 bg-sidebar border-r border-slate-200 flex flex-col justify-between shrink-0 z-30 transition-all duration-300 shadow-sm">
+  <aside id="nav-sidebar" class="w-64 bg-[#F6F5EE] border-r border-[#ECE8DF] flex flex-col justify-between shrink-0 z-30 transition-all duration-300">
     <!-- Brand / Title -->
     <div>
-      <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+      <div class="p-6 pb-5 flex items-center justify-between">
         <div class="flex items-center space-x-3">
-          <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-sm text-white">
-            <i data-lucide="activity" class="w-5 h-5 stroke-[2.2]"></i>
+          <!-- Cute Mascot Icon like Gullak -->
+          <div class="w-10 h-10 rounded-2xl bg-white border border-[#ECE8DF] flex items-center justify-center shadow-xs">
+            <svg class="w-6 h-6 text-[#18181B]" viewBox="0 0 32 32" fill="none">
+              <circle cx="16" cy="16" r="12" fill="#FAF9F5" stroke="#18181B" stroke-width="2"/>
+              <circle cx="12" cy="14" r="1.5" fill="#18181B"/>
+              <circle cx="20" cy="14" r="1.5" fill="#18181B"/>
+              <path d="M12 19 Q16 23 20 19" stroke="#18181B" stroke-width="2" stroke-linecap="round"/>
+              <path d="M16 4 L16 2" stroke="#18181B" stroke-width="2" stroke-linecap="round"/>
+            </svg>
           </div>
           <div>
-            <h1 class="text-sm font-bold tracking-tight text-slate-900 flex items-center gap-1.5">
-              ESA BIO-TELEMETRY
+            <h1 class="text-base font-extrabold tracking-tight text-[#18181B] leading-none">
+              ESA Health
             </h1>
-            <span class="text-[10px] text-slate-500 font-mono tracking-wider uppercase font-semibold">Clinical Health Cockpit</span>
+            <span class="text-[11px] text-[#78736B] font-medium tracking-normal mt-0.5 block">Multimodal Cockpit</span>
           </div>
         </div>
       </div>
 
-      <!-- System Connectivity Pill -->
-      <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
-        <div class="flex items-center justify-between text-xs">
-          <div class="flex items-center space-x-2">
-            <span id="sys-conn-dot" class="w-2 h-2 rounded-full bg-emerald-500 status-dot-pulse"></span>
-            <span id="sys-conn-status" class="text-slate-700 font-medium text-[11px]">TELEMETRY ACTIVE</span>
-          </div>
-          <span id="sys-rate-badge" class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-white text-slate-700 border border-slate-200 shadow-xs">100 Hz</span>
-        </div>
-      </div>
-
-      <!-- Navigation Links (All 8 Clinical Views) -->
-      <nav class="p-3 space-y-1" id="nav-links">
-        <button class="nav-item active w-full flex items-center space-x-3 px-3.5 py-2.5 text-xs tracking-normal" data-view="view-overview">
+      <!-- Navigation Links (Gullak Clean Vertical Items with Deep Black Active Pill) -->
+      <nav class="px-3.5 space-y-1" id="nav-links">
+        <button class="nav-item active w-full" data-view="view-overview">
           <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
-          <span>Overview Cockpit</span>
+          <span>Cockpit</span>
         </button>
-        <button class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 text-xs text-slate-600 hover:text-slate-900" data-view="view-face">
+        <button class="nav-item w-full" data-view="view-face">
           <i data-lucide="scan-face" class="w-4 h-4"></i>
-          <span>Face Access & Liveness</span>
+          <span>Biometrics</span>
         </button>
-        <button class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 text-xs text-slate-600 hover:text-slate-900" data-view="view-ecg">
+        <button class="nav-item w-full" data-view="view-ecg">
           <i data-lucide="heart-pulse" class="w-4 h-4"></i>
-          <span>Live ECG Waveform</span>
+          <span>ECG</span>
         </button>
-        <button class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 text-xs text-slate-600 hover:text-slate-900" data-view="view-ppg">
+        <button class="nav-item w-full" data-view="view-ppg">
           <i data-lucide="waves" class="w-4 h-4"></i>
-          <span>Live PPG & SpO2</span>
+          <span>PPG</span>
         </button>
-        <button class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 text-xs text-slate-600 hover:text-slate-900" data-view="view-analytics">
+        <button class="nav-item w-full" data-view="view-analytics">
           <i data-lucide="line-chart" class="w-4 h-4"></i>
-          <span>Health Analytics & BP</span>
+          <span>Analytics</span>
         </button>
-        <button class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 text-xs text-slate-600 hover:text-slate-900" data-view="view-history">
+        <button class="nav-item w-full" data-view="view-history">
           <i data-lucide="history" class="w-4 h-4"></i>
-          <span>Session History</span>
+          <span>History</span>
         </button>
-        <button class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 text-xs text-slate-600 hover:text-slate-900" data-view="view-reports">
+        <button class="nav-item w-full" data-view="view-reports">
           <i data-lucide="file-text" class="w-4 h-4"></i>
-          <span>Reports & Export</span>
+          <span>Reports</span>
         </button>
-        <button class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 text-xs text-slate-600 hover:text-slate-900" data-view="view-settings">
+        <button class="nav-item w-full" data-view="view-settings">
           <i data-lucide="settings-2" class="w-4 h-4"></i>
-          <span>Hardware & Simulator</span>
+          <span>Settings</span>
         </button>
       </nav>
     </div>
 
     <!-- Active Session Card in Sidebar Footer -->
-    <div class="p-4 border-t border-slate-200 bg-white">
-      <div class="glass-panel p-3.5 rounded-2xl border border-slate-200 text-xs bg-slate-50 shadow-xs">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-[10px] uppercase font-mono text-slate-500 font-semibold tracking-wider">Active Subject</span>
-          <span id="session-badge" class="px-2 py-0.5 rounded-full text-[9px] font-mono bg-white text-slate-600 border border-slate-200 font-medium">STANDBY</span>
+    <div class="p-4 border-t border-[#ECE8DF]">
+      <div class="p-4 rounded-2xl border border-[#ECE8DF] bg-white shadow-xs">
+        <div class="flex items-center justify-between mb-2.5">
+          <span class="text-[10px] uppercase font-bold text-[#78736B] tracking-wider">Active Subject</span>
+          <span id="session-badge" class="px-2 py-0.5 rounded-full text-[9px] font-mono bg-[#F6F5EE] text-[#59554E] border border-[#ECE8DF] font-semibold">STANDBY</span>
         </div>
         <div class="flex items-center space-x-2.5">
-          <div class="w-8 h-8 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center font-bold text-blue-700 text-xs" id="subject-avatar">
+          <div class="w-8 h-8 rounded-full bg-[#18181B] text-white flex items-center justify-center font-bold text-xs" id="subject-avatar">
             AS
           </div>
           <div class="truncate">
-            <div id="subject-name" class="font-semibold text-slate-900 text-xs truncate">Ashutosh</div>
-            <div id="session-timer" class="font-mono text-[11px] text-slate-500">00:00:00</div>
+            <div id="subject-name" class="font-bold text-[#18181B] text-xs truncate">Ashutosh</div>
+            <div id="session-timer" class="font-mono text-[11px] text-[#59554E]">00:00:00</div>
           </div>
         </div>
 
         <div class="mt-3 flex gap-2">
-          <button id="btn-toggle-session" class="flex-1 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-semibold transition-colors">
+          <button id="btn-toggle-session" class="flex-1 py-1.5 rounded-xl bg-[#18181B] hover:bg-[#000000] text-white text-[11px] font-semibold transition-all">
             Start Session
           </button>
-          <button id="btn-guest-session" title="Start Quick Guest Session" class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] transition-colors font-medium">
+          <button id="btn-guest-session" title="Start Quick Guest Session" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#F6F5EE] text-[#18181B] border border-[#DDD8CC] text-[11px] transition-colors font-medium">
             Guest
           </button>
         </div>
@@ -228,249 +239,325 @@
   </aside>
 
   <!-- =========================================================================
-       MAIN CONTENT VIEWPORT CONTAINER (LIGHT THEME)
+       MAIN CONTENT VIEWPORT CONTAINER (WARM EDITORIAL CANVAS)
        ========================================================================= -->
-  <main class="flex-1 flex flex-col h-screen overflow-y-auto overflow-x-hidden bg-app">
+  <main class="flex-1 flex flex-col h-screen overflow-y-auto overflow-x-hidden bg-[#F6F5EE]">
     
-    <!-- Top Bar with Personalized Verified Personnel Header -->
-    <header class="h-16 border-b border-slate-200 bg-white/90 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-20 shadow-xs">
+    <!-- Top Header Bar (Gullak Clean Warm Style) -->
+    <header class="h-16 border-b border-[#ECE8DF] bg-[#F6F5EE]/95 backdrop-blur-md px-8 flex items-center justify-between sticky top-0 z-20">
       <div class="flex items-center space-x-4">
-        <div id="view-title" class="font-bold text-slate-900 tracking-normal flex items-center gap-2 text-sm">
-          <i data-lucide="layout-dashboard" class="w-4 h-4 text-appleBlue"></i>
-          <span>Clinical Telemetry Cockpit</span>
-        </div>
-        <span class="text-xs text-slate-300">|</span>
-        <div class="flex items-center space-x-2 text-xs text-slate-600 font-mono">
-          <span>ECG LEAD II:</span>
-          <span id="lead-status-pill" class="text-emerald-600 font-semibold flex items-center gap-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> NORMAL
-          </span>
-        </div>
-        <span class="text-xs text-slate-300">|</span>
-        <div class="flex items-center space-x-2 text-xs text-slate-600 font-mono">
-          <span>PPG PROBE:</span>
-          <span id="ppg-status-pill" class="text-blue-600 font-semibold flex items-center gap-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> ATTACHED
-          </span>
+        <!-- Back Button to Cockpit Overview -->
+        <button id="btn-back-overview" class="warm-pill py-1.5 px-3 cursor-pointer text-xs font-semibold text-[#18181B] hover:bg-[#EFECE3] transition-colors flex items-center gap-1.5" data-jump="view-overview" title="Return to Cockpit Overview">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5 stroke-[2.2]"></i>
+          <span>Cockpit</span>
+        </button>
+        <span class="text-xs text-[#DDD8CC]">|</span>
+        <div id="view-title" class="font-bold text-[#18181B] flex items-center gap-2 text-xs">
+          <span>Clinical Telemetry</span>
         </div>
       </div>
 
       <div class="flex items-center space-x-3">
-        <!-- Personalized Verified Personnel Profile Header Display -->
-        <div class="flex items-center space-x-3 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-2xl shadow-xs">
-          <div id="header-user-avatar" class="w-7 h-7 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center font-bold text-blue-700 text-xs">
-            AS
-          </div>
-          <div class="text-left pr-1">
-            <div class="flex items-center gap-1.5">
-              <span id="header-user-name" class="font-bold text-xs text-slate-900">Ashutosh</span>
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            </div>
-            <div id="header-user-role" class="text-[10px] text-slate-500 leading-tight">Lead Biomedical Research Engineer</div>
-          </div>
-          <!-- Re-lock button to test or trigger Face ID Gate anytime -->
-          <button id="btn-header-lock" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors" title="Lock System & Trigger Face ID Gate">
-            <i data-lucide="lock" class="w-3.5 h-3.5"></i>
-          </button>
+        <!-- Help Circle Button -->
+        <button class="w-8 h-8 rounded-full border border-[#DDD8CC] bg-white flex items-center justify-center text-[#59554E] hover:text-[#18181B] transition-colors" title="Telemetry Help & Guide">
+          <i data-lucide="help-circle" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Rate Dropdown Pill -->
+        <div class="warm-pill cursor-pointer" title="Acquisition Sampling Rate">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#15803D]"></span>
+          <span>100 Hz Sync</span>
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-[#78736B]"></i>
         </div>
 
-        <!-- Audio Beeper Switch -->
-        <button id="btn-audio-toggle" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-700 hover:bg-slate-50 transition-colors shadow-xs" title="Toggle Cardiac Beep Tone">
-          <i data-lucide="volume-2" id="audio-icon" class="w-3.5 h-3.5 text-blue-600"></i>
-          <span id="audio-label" class="font-medium">Beep: Off</span>
-        </button>
-
-        <!-- Waveform Freeze Button -->
-        <button id="btn-freeze-toggle" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-700 hover:bg-slate-50 transition-colors shadow-xs" title="Freeze Oscilloscope Waves">
-          <i data-lucide="pause" id="freeze-icon" class="w-3.5 h-3.5 text-amber-600"></i>
-          <span id="freeze-label" class="font-medium">Freeze</span>
-        </button>
-
-        <!-- Live Clock -->
-        <div class="font-mono text-xs text-slate-600 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200" id="live-clock">
+        <!-- Session Clock Pill -->
+        <div class="warm-pill font-mono text-xs text-[#59554E]" id="live-clock">
           00:00:00 UTC
+        </div>
+
+        <!-- Audio Beeper Switch Pill -->
+        <button id="btn-audio-toggle" class="warm-pill cursor-pointer" title="Toggle Cardiac Beep Tone">
+          <i data-lucide="volume-2" id="audio-icon" class="w-3.5 h-3.5 text-[#18181B]"></i>
+          <span id="audio-label">Beep: Off</span>
+        </button>
+
+        <!-- Waveform Freeze Button Pill -->
+        <button id="btn-freeze-toggle" class="warm-pill cursor-pointer" title="Freeze Oscilloscope Waves">
+          <i data-lucide="pause" id="freeze-icon" class="w-3.5 h-3.5 text-[#B45309]"></i>
+          <span id="freeze-label">Freeze</span>
+        </button>
+
+        <!-- User Profile Capsule (Gullak Pill) -->
+        <div class="warm-pill gap-2 cursor-pointer" id="header-user-capsule">
+          <button id="btn-header-lock" class="p-0.5 text-[#59554E] hover:text-[#18181B] transition-colors" title="Lock System & Trigger Face ID Gate">
+            <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+          </button>
+          <div class="w-6 h-6 rounded-full bg-[#18181B] text-white font-bold text-[10px] flex items-center justify-center" id="header-user-avatar">
+            AS
+          </div>
+          <span id="header-user-name" class="font-bold text-xs text-[#18181B]">Ashutosh</span>
         </div>
       </div>
     </header>
 
-    <!-- Content Views Wrapper -->
-    <div class="p-6 flex-1 space-y-6">
+    <!-- Content Views Wrapper (Gullak Warm Canvas Container) -->
+    <div class="p-8 flex-1 space-y-7 max-w-6xl w-full mx-auto">
 
       <!-- =====================================================================
-           VIEW 1: OVERVIEW COCKPIT (BENTO GRID WITH APPLE WATCH OSCILLOSCOPES)
+           VIEW 1: OVERVIEW COCKPIT (GULLAK WARM EDITORIAL PRACTICE EPISODE)
            ===================================================================== -->
-      <section id="view-overview" class="view-panel space-y-6">
+      <section id="view-overview" class="view-panel space-y-7">
         
-        <!-- Live Alarm / Lead Detach Warning Banner (conditionally visible) -->
-        <div id="overview-alarm-banner" class="hidden p-3.5 rounded-2xl border border-rose-200 bg-rose-50 text-rose-800 flex items-center justify-between text-xs">
+        <!-- Hero Header -->
+        <div class="pt-1">
+          <h1 class="text-3xl font-extrabold text-[#18181B] tracking-tight mb-2">Practice with real telemetry</h1>
+          <p class="text-sm text-[#59554E] leading-relaxed max-w-3xl">Continuous 100 Hz physiological telemetry derived from Lead II ECG and optical MAX30102 photoplethysmogram. All vitals are synchronized with facial access.</p>
+        </div>
+
+        <!-- Gullu-Style Character Callout / Speech Bubble -->
+        <div class="speech-callout-wrapper">
+          <!-- Mascot Avatar with Gullu-style character -->
+          <div class="w-12 h-12 shrink-0 rounded-2xl bg-white border border-[#ECE8DF] flex items-center justify-center shadow-xs">
+            <svg class="w-8 h-8 text-[#18181B]" viewBox="0 0 32 32" fill="none">
+              <circle cx="16" cy="16" r="12" fill="#FAF9F5" stroke="#18181B" stroke-width="2"/>
+              <circle cx="12" cy="14" r="1.5" fill="#18181B"/>
+              <circle cx="20" cy="14" r="1.5" fill="#18181B"/>
+              <path d="M12 19 Q16 23 20 19" stroke="#18181B" stroke-width="2" stroke-linecap="round"/>
+              <path d="M16 4 L16 2" stroke="#18181B" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="speech-bubble">
+            <div class="text-[11px] font-bold text-[#78736B] uppercase tracking-wider mb-0.5">Gullu Health</div>
+            <p class="text-sm font-semibold text-[#18181B] leading-snug">
+              Decide with what the physiological sensors reveal. Both Lead II ECG and optical PPG signals are actively streaming with Pan-Tompkins QRS synchronization.
+            </p>
+          </div>
+        </div>
+
+        <!-- Alarm Banner (if leads detached) -->
+        <div id="overview-alarm-banner" class="hidden p-4 rounded-2xl border border-[#FECDD3] bg-[#FFF1F2] text-[#BE123C] flex items-center justify-between text-xs">
           <div class="flex items-center space-x-3">
-            <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-600"></i>
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-[#BE123C]"></i>
             <span class="font-bold text-sm" id="alarm-banner-text">CRITICAL LEAD FAULT DETECTED</span>
           </div>
-          <span class="font-mono text-[11px] text-rose-600 font-semibold">CHECK PATIENT ELECTRODES</span>
+          <span class="font-mono text-[11px] font-semibold">CHECK PATIENT ELECTRODES</span>
         </div>
 
-        <!-- Primary Vital Sign Bento Grid (rounded-2xl, subtle Airbnb/Apple shadow, Inter typography) -->
-        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-          
-          <!-- Heart Rate Card -->
-          <div class="glass-panel p-4 flex flex-col justify-between relative overflow-hidden border-emerald-100">
-            <div class="flex items-center justify-between">
-              <span class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Heart Rate</span>
-              <i data-lucide="heart" id="hr-pulse-icon" class="w-4 h-4 text-emerald-600"></i>
+        <!-- Primary Card 1: PRACTICE EPISODE (Gullak White Card) -->
+        <div class="content-card rounded-3xl p-7 space-y-6">
+          <div class="flex items-center justify-between border-b border-[#ECE8DF] pb-4">
+            <div class="card-eyebrow flex items-center gap-1.5 text-[#15803D]">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span>PRACTICE EPISODE</span>
             </div>
-            <div class="my-2 flex items-baseline space-x-1.5">
-              <span id="metric-hr" class="text-3xl font-extrabold hud-mono text-slate-900">72</span>
-              <span class="text-xs text-slate-500 font-mono font-medium">BPM</span>
-            </div>
-            <div class="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100 pt-2 font-mono">
-              <span>ECG / PPG Sync</span>
-              <span id="hr-quality-tag" class="text-emerald-600 font-semibold">VALID</span>
+            <div class="text-xs text-[#78736B] font-mono flex items-center gap-1.5">
+              <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+              <span>Oct 2026 – Active Session</span>
             </div>
           </div>
 
-          <!-- SpO2 Oxygenation Card -->
-          <div class="glass-panel p-4 flex flex-col justify-between relative overflow-hidden border-blue-100">
-            <div class="flex items-center justify-between">
-              <span class="text-xs uppercase tracking-wider text-slate-500 font-semibold">SpO2 Saturation</span>
-              <i data-lucide="droplet" class="w-4 h-4 text-blue-600"></i>
+          <!-- Card Header & Story Description -->
+          <div class="flex items-start gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF] flex items-center justify-center shrink-0">
+              <i data-lucide="activity" class="w-6 h-6 text-[#18181B]"></i>
             </div>
-            <div class="my-2 flex items-baseline space-x-1.5">
-              <span id="metric-spo2" class="text-3xl font-extrabold hud-mono text-slate-900">98.4</span>
-              <span class="text-xs text-slate-500 font-mono font-medium">%</span>
-            </div>
-            <div class="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100 pt-2 font-mono">
-              <span>PI: <b id="metric-pi" class="text-slate-700 font-medium">4.2%</b></span>
-              <span id="spo2-status" class="text-blue-600 font-semibold">OPTIMAL</span>
+            <div class="space-y-1">
+              <h2 class="text-xl font-bold text-[#18181B]">Continuous Multi-Lead Synchronized Vital Signs</h2>
+              <p class="text-xs text-[#59554E] leading-relaxed max-w-3xl">
+                It's a continuous telemetry recording. You're monitoring real-time hemodynamics and autonomic state. All 6 physiological channels are calculated and verified for enrolled personnel (Ashutosh & Dhrunil).
+              </p>
             </div>
           </div>
 
-          <!-- Blood Pressure Card -->
-          <div class="glass-panel p-4 flex flex-col justify-between relative overflow-hidden border-purple-100">
-            <div class="flex items-center justify-between">
-              <span class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Blood Pressure</span>
-              <i data-lucide="gauge" class="w-4 h-4 text-purple-600"></i>
+          <!-- 6 Primary Vitals Bento Grid -->
+          <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5 pt-2">
+            
+            <!-- Heart Rate -->
+            <div class="p-4 rounded-2xl border border-[#ECE8DF] bg-[#FAF9F5] flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-[#78736B]">Heart Rate</span>
+                <i data-lucide="heart" id="hr-pulse-icon" class="w-3.5 h-3.5 text-[#15803D]"></i>
+              </div>
+              <div class="my-1 flex items-baseline space-x-1.5">
+                <span id="metric-hr" class="text-3xl font-extrabold hud-mono text-[#18181B]">72</span>
+                <span class="text-xs text-[#59554E] font-mono">BPM</span>
+              </div>
+              <div class="flex items-center justify-between text-[10px] text-[#78736B] pt-2 border-t border-[#ECE8DF] font-mono">
+                <span>ECG/PPG</span>
+                <span id="hr-quality-tag" class="text-[#15803D] font-semibold">VALID</span>
+              </div>
             </div>
-            <div class="my-2 flex items-baseline space-x-1.5">
-              <span id="metric-bp" class="text-3xl font-extrabold hud-mono text-slate-900">118 / 78</span>
-              <span class="text-xs text-slate-500 font-mono font-medium">mmHg</span>
+
+            <!-- SpO2 -->
+            <div class="p-4 rounded-2xl border border-[#ECE8DF] bg-[#FAF9F5] flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-[#78736B]">SpO2 Sat</span>
+                <i data-lucide="droplet" class="w-3.5 h-3.5 text-[#1D4ED8]"></i>
+              </div>
+              <div class="my-1 flex items-baseline space-x-1.5">
+                <span id="metric-spo2" class="text-3xl font-extrabold hud-mono text-[#18181B]">98.4</span>
+                <span class="text-xs text-[#59554E] font-mono">%</span>
+              </div>
+              <div class="flex items-center justify-between text-[10px] text-[#78736B] pt-2 border-t border-[#ECE8DF] font-mono">
+                <span>PI: <b id="metric-pi" class="text-[#18181B]">4.2%</b></span>
+                <span id="spo2-status" class="text-[#1D4ED8] font-semibold">OPTIMAL</span>
+              </div>
             </div>
-            <div class="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100 pt-2 font-mono">
-              <span>PAT Model</span>
-              <span class="text-purple-600 font-semibold">NORMAL</span>
+
+            <!-- Blood Pressure -->
+            <div class="p-4 rounded-2xl border border-[#ECE8DF] bg-[#FAF9F5] flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-[#78736B]">Blood Press.</span>
+                <i data-lucide="gauge" class="w-3.5 h-3.5 text-[#7C3AED]"></i>
+              </div>
+              <div class="my-1 flex items-baseline space-x-1.5">
+                <span id="metric-bp" class="text-2xl font-extrabold hud-mono text-[#18181B]">118/78</span>
+                <span class="text-[10px] text-[#59554E] font-mono">mmHg</span>
+              </div>
+              <div class="flex items-center justify-between text-[10px] text-[#78736B] pt-2 border-t border-[#ECE8DF] font-mono">
+                <span>PAT Model</span>
+                <span class="text-[#7C3AED] font-semibold">NORMAL</span>
+              </div>
             </div>
+
+            <!-- Respiration -->
+            <div class="p-4 rounded-2xl border border-[#ECE8DF] bg-[#FAF9F5] flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-[#78736B]">Respiration</span>
+                <i data-lucide="wind" class="w-3.5 h-3.5 text-[#0284C7]"></i>
+              </div>
+              <div class="my-1 flex items-baseline space-x-1.5">
+                <span id="metric-resp" class="text-3xl font-extrabold hud-mono text-[#18181B]">16</span>
+                <span class="text-xs text-[#59554E] font-mono">BrPM</span>
+              </div>
+              <div class="flex items-center justify-between text-[10px] text-[#78736B] pt-2 border-t border-[#ECE8DF] font-mono">
+                <span>EDR+PPG</span>
+                <span class="text-[#0284C7] font-semibold">REGULAR</span>
+              </div>
+            </div>
+
+            <!-- PAT -->
+            <div class="p-4 rounded-2xl border border-[#ECE8DF] bg-[#FAF9F5] flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-[#78736B]">Pulse Arrival</span>
+                <i data-lucide="timer" class="w-3.5 h-3.5 text-[#B45309]"></i>
+              </div>
+              <div class="my-1 flex items-baseline space-x-1.5">
+                <span id="metric-pat" class="text-3xl font-extrabold hud-mono text-[#18181B]">224</span>
+                <span class="text-xs text-[#59554E] font-mono">ms</span>
+              </div>
+              <div class="flex items-center justify-between text-[10px] text-[#78736B] pt-2 border-t border-[#ECE8DF] font-mono">
+                <span>Vascular</span>
+                <span class="text-[#B45309] font-semibold">ELASTIC</span>
+              </div>
+            </div>
+
+            <!-- HRV -->
+            <div class="p-4 rounded-2xl border border-[#ECE8DF] bg-[#FAF9F5] flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-[#78736B]">HRV RMSSD</span>
+                <i data-lucide="bar-chart-2" class="w-3.5 h-3.5 text-[#0D9488]"></i>
+              </div>
+              <div class="my-1 flex items-baseline space-x-1.5">
+                <span id="metric-rmssd" class="text-3xl font-extrabold hud-mono text-[#18181B]">42.8</span>
+                <span class="text-xs text-[#59554E] font-mono">ms</span>
+              </div>
+              <div class="flex items-center justify-between text-[10px] text-[#78736B] pt-2 border-t border-[#ECE8DF] font-mono">
+                <span>SDNN: <b id="metric-sdnn" class="text-[#18181B]">51 ms</b></span>
+                <span class="text-[#0D9488] font-semibold">BALANCED</span>
+              </div>
+            </div>
+
           </div>
 
-          <!-- Respiration Rate Card -->
-          <div class="glass-panel p-4 flex flex-col justify-between relative overflow-hidden border-sky-100">
-            <div class="flex items-center justify-between">
-              <span class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Respiration</span>
-              <i data-lucide="wind" class="w-4 h-4 text-sky-600"></i>
+          <!-- What You Will Explore Subsection -->
+          <div class="pt-3 border-t border-[#ECE8DF] space-y-2">
+            <div class="text-[11px] font-bold text-[#78736B] uppercase tracking-wider">WHAT YOU WILL EXPLORE</div>
+            <div class="flex items-center gap-2.5 text-xs text-[#18181B] font-medium">
+              <i data-lucide="target" class="w-4 h-4 text-[#BE123C] shrink-0"></i>
+              <span>Notice how pulse arrival time (PAT) changes as arterial compliance shifts with each cardiac cycle.</span>
             </div>
-            <div class="my-2 flex items-baseline space-x-1.5">
-              <span id="metric-resp" class="text-3xl font-extrabold hud-mono text-slate-900">16</span>
-              <span class="text-xs text-slate-500 font-mono font-medium">BrPM</span>
-            </div>
-            <div class="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100 pt-2 font-mono">
-              <span>EDR + PPG</span>
-              <span class="text-sky-600 font-semibold">REGULAR</span>
+            <div class="flex items-center gap-2.5 text-xs text-[#18181B] font-medium">
+              <i data-lucide="check-circle" class="w-4 h-4 text-[#15803D] shrink-0"></i>
+              <span>Facial recognition seamlessly binds continuous telemetry recordings with the verified participant profile.</span>
             </div>
           </div>
-
-          <!-- Pulse Arrival Time (PAT) -->
-          <div class="glass-panel p-4 flex flex-col justify-between relative overflow-hidden border-amber-100">
-            <div class="flex items-center justify-between">
-              <span class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Pulse Arrival (PAT)</span>
-              <i data-lucide="timer" class="w-4 h-4 text-amber-600"></i>
-            </div>
-            <div class="my-2 flex items-baseline space-x-1.5">
-              <span id="metric-pat" class="text-3xl font-extrabold hud-mono text-slate-900">224</span>
-              <span class="text-xs text-slate-500 font-mono font-medium">ms</span>
-            </div>
-            <div class="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100 pt-2 font-mono">
-              <span>Vascular Tone</span>
-              <span class="text-amber-600 font-semibold">ELASTIC</span>
-            </div>
-          </div>
-
-          <!-- HRV (RMSSD) Card -->
-          <div class="glass-panel p-4 flex flex-col justify-between relative overflow-hidden border-teal-100">
-            <div class="flex items-center justify-between">
-              <span class="text-xs uppercase tracking-wider text-slate-500 font-semibold">HRV (RMSSD)</span>
-              <i data-lucide="bar-chart-2" class="w-4 h-4 text-teal-600"></i>
-            </div>
-            <div class="my-2 flex items-baseline space-x-1.5">
-              <span id="metric-rmssd" class="text-3xl font-extrabold hud-mono text-slate-900">42.8</span>
-              <span class="text-xs text-slate-500 font-mono font-medium">ms</span>
-            </div>
-            <div class="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100 pt-2 font-mono">
-              <span>SDNN: <b id="metric-sdnn" class="text-slate-700 font-medium">51 ms</b></span>
-              <span class="text-teal-600 font-semibold">BALANCED</span>
-            </div>
-          </div>
-
         </div>
 
-        <!-- Dual Mini-Oscilloscopes Viewport Section (Apple Watch ECG Style) -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
-          <!-- Mini ECG Lead II Scope -->
-          <div class="glass-panel p-4 flex flex-col bg-white">
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center space-x-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                <span class="font-bold text-xs tracking-wider text-slate-800 uppercase">ECG MONITOR (Lead II)</span>
-              </div>
-              <div class="flex items-center space-x-3 text-xs font-mono text-slate-500">
-                <span>R-R: <b id="mini-rr" class="text-slate-900 font-bold">833 ms</b></span>
-                <button class="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors" data-jump="view-ecg">
-                  Expanded <i data-lucide="maximize-2" class="w-3 h-3"></i>
-                </button>
-              </div>
+        <!-- Primary Card 2: LIVE OSCILLOSCOPES (Gullak Portfolio Style) -->
+        <div class="content-card rounded-3xl p-7 space-y-6">
+          <div class="flex items-center justify-between border-b border-[#ECE8DF] pb-4">
+            <div class="card-eyebrow flex items-center gap-1.5 text-[#18181B]">
+              <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+              <span>LIVE OSCILLOSCOPES</span>
             </div>
-            <div class="scope-bezel h-64 w-full">
-              <canvas id="canvas-mini-ecg" class="scope-canvas"></canvas>
+            <div class="text-xs text-[#78736B] font-mono flex items-center gap-1.5">
+              <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+              <span>As of Live Stream · 100 Hz</span>
             </div>
           </div>
 
-          <!-- Mini PPG Dual Red / IR Scope -->
-          <div class="glass-panel p-4 flex flex-col bg-white">
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center space-x-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                <span class="font-bold text-xs tracking-wider text-slate-800 uppercase">PPG PLETHYSMOGRAM</span>
+          <!-- Dual Mini-Oscilloscopes Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Mini ECG Scope -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#15803D]"></span>
+                  <span class="font-bold text-xs tracking-wider text-[#18181B] uppercase">ECG MONITOR (Lead II)</span>
+                </div>
+                <div class="flex items-center space-x-3 text-xs font-mono text-[#59554E]">
+                  <span>R-R: <b id="mini-rr" class="text-[#18181B] font-bold">833 ms</b></span>
+                  <button class="warm-pill py-1 px-2.5 text-xs font-semibold cursor-pointer" data-jump="view-ecg">
+                    Expanded <i data-lucide="maximize-2" class="w-3 h-3"></i>
+                  </button>
+                </div>
               </div>
-              <div class="flex items-center space-x-3 text-xs font-mono text-slate-500">
-                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span> IR</span>
-                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span> Red</span>
-                <button class="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors" data-jump="view-ppg">
-                  Expanded <i data-lucide="maximize-2" class="w-3 h-3"></i>
-                </button>
+              <div class="scope-bezel h-60 w-full">
+                <canvas id="canvas-mini-ecg" class="scope-canvas"></canvas>
               </div>
             </div>
-            <div class="scope-bezel h-64 w-full">
-              <canvas id="canvas-mini-ppg" class="scope-canvas"></canvas>
-            </div>
-          </div>
 
+            <!-- Mini PPG Scope -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#1D4ED8]"></span>
+                  <span class="font-bold text-xs tracking-wider text-[#18181B] uppercase">PPG PLETHYSMOGRAM</span>
+                </div>
+                <div class="flex items-center space-x-3 text-xs font-mono text-[#59554E]">
+                  <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#1D4ED8] inline-block"></span> IR</span>
+                  <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#BE123C] inline-block"></span> Red</span>
+                  <button class="warm-pill py-1 px-2.5 text-xs font-semibold cursor-pointer" data-jump="view-ppg">
+                    Expanded <i data-lucide="maximize-2" class="w-3 h-3"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="scope-bezel h-60 w-full">
+                <canvas id="canvas-mini-ppg" class="scope-canvas"></canvas>
+              </div>
+            </div>
+
+          </div>
         </div>
 
-        <!-- Quick Access & Biometrics Status Banner -->
-        <div class="glass-panel p-5 flex flex-col md:flex-row items-center justify-between gap-4 bg-white border-slate-200">
+        <!-- Card 3: Biometric Access Action Card -->
+        <div class="content-card rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div class="flex items-center space-x-4">
-            <div class="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center">
-              <i data-lucide="shield-check" class="w-5 h-5 text-blue-600"></i>
+            <div class="w-11 h-11 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF] flex items-center justify-center text-[#18181B]">
+              <i data-lucide="shield-check" class="w-5 h-5 text-[#15803D]"></i>
             </div>
             <div>
-              <div class="font-bold text-sm text-slate-900">Face ID & Biometric Telemetry Coupling</div>
-              <div class="text-xs text-slate-500">Continuous biometric telemetry synchronized for verified personnel: Ashutosh & Dhrunil.</div>
+              <div class="font-bold text-sm text-[#18181B]">Face ID & Biometric Telemetry Coupling</div>
+              <div class="text-xs text-[#59554E]">Biometric telemetry is calibrated for enrolled personnel: Ashutosh & Dhrunil.</div>
             </div>
           </div>
           <div class="flex items-center gap-3">
-            <button class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-2 transition-all shadow-sm" data-jump="view-face">
+            <button class="warm-btn warm-btn-primary px-4 py-2 text-xs" data-jump="view-face">
               <i data-lucide="camera" class="w-3.5 h-3.5"></i> Open Biometrics
             </button>
-            <button class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 text-xs font-semibold flex items-center gap-2 transition-colors" data-jump="view-history">
+            <button class="warm-btn warm-btn-secondary px-4 py-2 text-xs" data-jump="view-history">
               <i data-lucide="history" class="w-3.5 h-3.5"></i> Past Sessions
             </button>
           </div>
@@ -479,31 +566,31 @@
       </section>
 
       <!-- =====================================================================
-           VIEW 2: FACE ACCESS & LIVENESS (APPLE STYLING - LIGHT THEME)
+           VIEW 2: FACE ACCESS & LIVENESS (WARM EDITORIAL DESIGN)
            ===================================================================== -->
       <section id="view-face" class="view-panel hidden space-y-6">
         
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           <!-- Webcam Video Element with Real-Time Canvas Overlay (2 cols) -->
-          <div class="lg:col-span-2 glass-panel p-5 flex flex-col bg-white">
+          <div class="lg:col-span-2 content-card rounded-3xl p-6 flex flex-col bg-white">
             <div class="flex items-center justify-between mb-4">
-              <div class="flex items-center space-x-2">
-                <i data-lucide="scan" class="w-4 h-4 text-blue-600"></i>
-                <h3 class="font-bold text-xs text-slate-800 uppercase tracking-wider">Live Biometric Recognition Stream</h3>
+              <div class="flex items-center space-x-2.5">
+                <i data-lucide="scan" class="w-4 h-4 text-[#18181B]"></i>
+                <h3 class="font-bold text-xs text-[#18181B] uppercase tracking-wider">Live Biometric Recognition Stream</h3>
               </div>
               <div class="flex items-center space-x-3">
-                <span id="face-stream-status" class="px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
+                <span id="face-stream-status" class="px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0] font-semibold">
                   CAMERA ACTIVE (10 FPS)
                 </span>
-                <button id="btn-toggle-camera" class="px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium border border-slate-200 transition-colors">
+                <button id="btn-toggle-camera" class="warm-btn warm-btn-secondary py-1 px-3 text-xs">
                   Pause Stream
                 </button>
               </div>
             </div>
 
             <!-- Webcam Interactive Container -->
-            <div class="webcam-box h-[440px] w-full flex items-center justify-center relative">
+            <div class="webcam-box h-[440px] w-full flex items-center justify-center relative rounded-2xl">
               <video id="webcam-video" class="webcam-video" autoplay playsinline muted></video>
               <canvas id="webcam-overlay" class="webcam-overlay"></canvas>
 
@@ -514,24 +601,24 @@
               <div class="corner-bracket corner-br"></div>
 
               <!-- Camera Placeholder / Permission state -->
-              <div id="camera-placeholder" class="hidden absolute inset-0 bg-slate-900 flex flex-col items-center justify-center p-6 text-center text-white">
-                <i data-lucide="video-off" class="w-12 h-12 text-slate-500 mb-3"></i>
-                <h4 class="font-bold text-slate-100 text-sm mb-1">Webcam Feed Inactive</h4>
-                <p class="text-xs text-slate-400 max-w-sm mb-4">Grant camera permissions or use live tracking simulation for biometric access validation.</p>
-                <button id="btn-request-cam" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm">
+              <div id="camera-placeholder" class="hidden absolute inset-0 bg-[#18181B] flex flex-col items-center justify-center p-6 text-center text-white rounded-2xl">
+                <i data-lucide="video-off" class="w-12 h-12 text-[#78736B] mb-3"></i>
+                <h4 class="font-bold text-white text-sm mb-1">Webcam Feed Inactive</h4>
+                <p class="text-xs text-[#9C978E] max-w-sm mb-4">Grant camera permissions or use live tracking simulation for biometric access validation.</p>
+                <button id="btn-request-cam" class="warm-btn warm-btn-primary px-4 py-2 text-xs">
                   Request Camera Access
                 </button>
               </div>
             </div>
 
             <!-- Stream Performance Bar -->
-            <div class="mt-3 flex items-center justify-between text-xs text-slate-500 font-mono">
+            <div class="mt-4 flex items-center justify-between text-xs text-[#78736B] font-mono">
               <div class="flex items-center space-x-4">
-                <span>INFERENCE: <b id="face-latency" class="text-slate-800 font-bold">18 ms</b></span>
-                <span>MODEL: <b class="text-blue-600 font-medium">SCRFD + ArcFace R100</b></span>
-                <span>TRACKER: <b class="text-purple-600 font-medium">BYTETracker</b></span>
+                <span>INFERENCE: <b id="face-latency" class="text-[#18181B] font-bold">18 ms</b></span>
+                <span>MODEL: <b class="text-[#18181B] font-medium">SCRFD + ArcFace R100</b></span>
+                <span>TRACKER: <b class="text-[#18181B] font-medium">BYTETracker</b></span>
               </div>
-              <span id="face-count-tag" class="text-slate-800 font-semibold">1 Face Detected</span>
+              <span id="face-count-tag" class="text-[#18181B] font-semibold">1 Face Detected</span>
             </div>
           </div>
 
@@ -539,68 +626,68 @@
           <div class="space-y-6">
             
             <!-- Subject Identification Card -->
-            <div class="glass-panel p-5 bg-white">
-              <div class="flex items-center justify-between mb-4">
-                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">Identity Tag</h4>
-                <span id="subject-access-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
+            <div class="content-card rounded-3xl p-6 bg-white space-y-4">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-[#78736B]">Identity Tag</h4>
+                <span id="subject-access-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0] font-semibold">
                   VERIFIED ENROLLED
                 </span>
               </div>
 
-              <div class="flex items-center space-x-3 mb-4">
-                <div id="id-photo-placeholder" class="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700 font-mono text-base font-bold shadow-xs">
+              <div class="flex items-center space-x-3.5">
+                <div id="id-photo-placeholder" class="w-14 h-14 rounded-2xl bg-[#18181B] text-white flex items-center justify-center font-mono text-base font-bold shadow-xs">
                   AS
                 </div>
                 <div>
-                  <h3 id="id-recognized-name" class="font-bold text-slate-900 text-base">Ashutosh</h3>
-                  <div class="text-xs font-mono text-slate-500">ID: <span id="id-participant-num" class="font-bold">#016</span> | Conf: <span id="id-similarity" class="text-blue-600 font-bold">96.8%</span></div>
-                  <div class="text-[11px] text-slate-500 font-mono">Role: Lead Biomedical Engineer</div>
+                  <h3 id="id-recognized-name" class="font-bold text-[#18181B] text-base">Ashutosh</h3>
+                  <div class="text-xs font-mono text-[#59554E]">ID: <span id="id-participant-num" class="font-bold">#016</span> | Conf: <span id="id-similarity" class="text-[#15803D] font-bold">96.8%</span></div>
+                  <div class="text-[11px] text-[#78736B] font-mono">Role: Lead Biomedical Engineer</div>
                 </div>
               </div>
 
               <!-- Liveness & Anti-Spoofing Status -->
-              <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+              <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF] space-y-2 text-xs">
                 <div class="flex items-center justify-between">
-                  <span class="text-slate-600 font-medium">Liveness State:</span>
-                  <span id="live-state-tag" class="font-bold text-emerald-700 flex items-center gap-1">
+                  <span class="text-[#59554E] font-medium">Liveness State:</span>
+                  <span id="live-state-tag" class="font-bold text-[#15803D] flex items-center gap-1">
                     <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> LIVE SUBJECT
                   </span>
                 </div>
                 <div class="flex items-center justify-between">
-                  <span class="text-slate-600 font-medium">Blink Detected:</span>
-                  <span id="live-blink-tag" class="font-mono text-blue-600 font-bold">YES (EAR 0.31)</span>
+                  <span class="text-[#59554E] font-medium">Blink Detected:</span>
+                  <span id="live-blink-tag" class="font-mono text-[#18181B] font-bold">YES (EAR 0.31)</span>
                 </div>
                 <div class="flex items-center justify-between">
-                  <span class="text-slate-600 font-medium">Motion Score:</span>
-                  <span id="live-motion-tag" class="font-mono text-slate-700 font-bold">0.88 (PASS)</span>
+                  <span class="text-[#59554E] font-medium">Motion Score:</span>
+                  <span id="live-motion-tag" class="font-mono text-[#18181B] font-bold">0.88 (PASS)</span>
                 </div>
                 <div class="flex items-center justify-between">
-                  <span class="text-slate-600 font-medium">Head Pose:</span>
-                  <span id="live-pose-tag" class="font-mono text-slate-700 font-bold">2° / -1° / 0°</span>
+                  <span class="text-[#59554E] font-medium">Head Pose:</span>
+                  <span id="live-pose-tag" class="font-mono text-[#18181B] font-bold">2° / -1° / 0°</span>
                 </div>
               </div>
 
               <!-- 1-Click Bind Session Button -->
-              <div class="mt-4">
-                <button id="btn-bind-subject" class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs tracking-normal transition-all shadow-sm flex items-center justify-center gap-2">
+              <div>
+                <button id="btn-bind-subject" class="w-full py-2.5 rounded-2xl warm-btn warm-btn-primary font-bold text-xs tracking-normal transition-all shadow-xs flex items-center justify-center gap-2">
                   <i data-lucide="link-2" class="w-4 h-4"></i> Bind Telemetry To Subject
                 </button>
               </div>
             </div>
 
             <!-- New Subject Quick Enrollment Form -->
-            <div class="glass-panel p-5 bg-white">
-              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Quick Enroll Personnel</h4>
+            <div class="content-card rounded-3xl p-6 bg-white space-y-3">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-[#78736B]">Quick Enroll Personnel</h4>
               <form id="enroll-form" class="space-y-3 text-xs">
                 <div>
-                  <label class="block text-slate-600 font-medium mb-1">Full Name</label>
-                  <input type="text" id="enroll-name" placeholder="e.g. Ashutosh" required class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-500 font-medium">
+                  <label class="block text-[#18181B] font-semibold mb-1">Full Name</label>
+                  <input type="text" id="enroll-name" placeholder="e.g. Ashutosh" required class="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF9F5] border border-[#DDD8CC] text-[#18181B] focus:outline-none focus:border-[#18181B] focus:bg-white font-medium text-xs">
                 </div>
                 <div>
-                  <label class="block text-slate-600 font-medium mb-1">Role / Notes</label>
-                  <input type="text" id="enroll-notes" placeholder="e.g. Verified Enrolled Personnel" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-500 font-medium">
+                  <label class="block text-[#18181B] font-semibold mb-1">Role / Notes</label>
+                  <input type="text" id="enroll-notes" placeholder="e.g. Verified Enrolled Personnel" class="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF9F5] border border-[#DDD8CC] text-[#18181B] focus:outline-none focus:border-[#18181B] focus:bg-white font-medium text-xs">
                 </div>
-                <button type="submit" class="w-full py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold transition-colors flex items-center justify-center gap-1.5">
+                <button type="submit" class="w-full py-2.5 rounded-2xl warm-btn warm-btn-secondary font-bold transition-colors flex items-center justify-center gap-1.5">
                   <i data-lucide="user-plus" class="w-4 h-4"></i> Capture Frame & Enroll
                 </button>
               </form>
@@ -614,54 +701,54 @@
       </section>
 
       <!-- =====================================================================
-           VIEW 3: LIVE ECG OSCILLOSCOPE (APPLE WATCH ECG HIGH-RESOLUTION SCOPE)
+           VIEW 3: LIVE ECG OSCILLOSCOPE (WARM EDITORIAL DESIGN)
            ===================================================================== -->
       <section id="view-ecg" class="view-panel hidden space-y-6">
         
         <!-- ECG Header & Diagnostic Bar -->
-        <div class="glass-panel p-4 flex flex-col md:flex-row items-center justify-between gap-4 bg-white">
-          <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
-              <i data-lucide="heart-pulse" class="w-5 h-5 text-emerald-600"></i>
+        <div class="content-card rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 bg-white">
+          <div class="flex items-center space-x-3.5">
+            <div class="w-10 h-10 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF] flex items-center justify-center text-[#18181B]">
+              <i data-lucide="heart-pulse" class="w-5 h-5 text-[#15803D]"></i>
             </div>
             <div>
-              <h2 class="text-sm font-bold text-slate-900 tracking-wide">Electrocardiogram (Lead II) Apple Watch ECG Scope</h2>
-              <p class="text-xs text-slate-500">100 Hz Continuous Acquisition &bull; Bandpass Filtered &bull; Pan-Tompkins QRS Analysis</p>
+              <h2 class="text-base font-bold text-[#18181B] tracking-tight">Electrocardiogram (Lead II) High-Resolution Scope</h2>
+              <p class="text-xs text-[#59554E]">100 Hz Continuous Acquisition &bull; Bandpass Filtered &bull; Pan-Tompkins QRS Analysis</p>
             </div>
           </div>
 
-          <div class="flex items-center space-x-4 font-mono text-xs">
-            <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span class="text-slate-500 font-medium">DIAGNOSIS:</span>
-              <span id="ecg-rhythm-diagnosis" class="text-emerald-700 font-bold ml-1">NORMAL SINUS RHYTHM</span>
+          <div class="flex items-center space-x-3 font-mono text-xs">
+            <div class="warm-pill">
+              <span class="text-[#78736B]">DIAGNOSIS:</span>
+              <span id="ecg-rhythm-diagnosis" class="text-[#15803D] font-bold ml-1">NORMAL SINUS RHYTHM</span>
             </div>
-            <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span class="text-slate-500 font-medium">HR:</span>
-              <span id="ecg-hr-value" class="text-emerald-700 font-bold ml-1">72 BPM</span>
+            <div class="warm-pill">
+              <span class="text-[#78736B]">HR:</span>
+              <span id="ecg-hr-value" class="text-[#15803D] font-bold ml-1">72 BPM</span>
             </div>
-            <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span class="text-slate-500 font-medium">RR:</span>
-              <span id="ecg-rr-value" class="text-slate-900 font-bold ml-1">833 ms</span>
+            <div class="warm-pill">
+              <span class="text-[#78736B]">RR:</span>
+              <span id="ecg-rr-value" class="text-[#18181B] font-bold ml-1">833 ms</span>
             </div>
           </div>
         </div>
 
-        <!-- Apple Watch Style Full-Width ECG Oscilloscope Screen -->
-        <div class="glass-panel p-4 bg-white">
+        <!-- Full-Width ECG Oscilloscope Screen -->
+        <div class="content-card rounded-3xl p-6 bg-white space-y-4">
           
           <!-- Oscilloscope Top Controls Toolbar -->
-          <div class="flex flex-wrap items-center justify-between gap-3 mb-3 text-xs">
+          <div class="flex flex-wrap items-center justify-between gap-3 text-xs">
             <div class="flex items-center space-x-2 font-mono">
-              <span class="text-slate-500 font-semibold">MODE:</span>
-              <button id="btn-ecg-mode-sweep" class="px-3 py-1 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 font-bold">Sweep Display</button>
-              <button id="btn-ecg-mode-scroll" class="px-3 py-1 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 font-medium">Scroll Strip</button>
+              <span class="text-[#78736B] font-semibold">MODE:</span>
+              <button id="btn-ecg-mode-sweep" class="warm-btn warm-btn-primary py-1 px-3 text-xs">Sweep Display</button>
+              <button id="btn-ecg-mode-scroll" class="warm-btn warm-btn-secondary py-1 px-3 text-xs">Scroll Strip</button>
             </div>
 
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-3">
               <!-- Sweep Speed -->
               <div class="flex items-center space-x-1.5 font-mono">
-                <span class="text-slate-500 font-semibold">SPEED:</span>
-                <select id="select-ecg-speed" class="px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs focus:outline-none font-medium">
+                <span class="text-[#78736B] font-semibold">SPEED:</span>
+                <select id="select-ecg-speed" class="px-3 py-1 rounded-xl bg-[#FAF9F5] border border-[#DDD8CC] text-[#18181B] text-xs focus:outline-none font-medium">
                   <option value="12.5">12.5 mm/s</option>
                   <option value="25.0" selected>25.0 mm/s (Standard)</option>
                   <option value="50.0">50.0 mm/s</option>
@@ -670,8 +757,8 @@
 
               <!-- Gain Scale -->
               <div class="flex items-center space-x-1.5 font-mono">
-                <span class="text-slate-500 font-semibold">GAIN:</span>
-                <select id="select-ecg-gain" class="px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs focus:outline-none font-medium">
+                <span class="text-[#78736B] font-semibold">GAIN:</span>
+                <select id="select-ecg-gain" class="px-3 py-1 rounded-xl bg-[#FAF9F5] border border-[#DDD8CC] text-[#18181B] text-xs focus:outline-none font-medium">
                   <option value="0.5">0.5x (5 mm/mV)</option>
                   <option value="1.0" selected>1.0x (10 mm/mV)</option>
                   <option value="2.0">2.0x (20 mm/mV)</option>
@@ -680,7 +767,7 @@
               </div>
 
               <!-- Grid Toggle -->
-              <button id="btn-ecg-grid-toggle" class="px-3 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 font-medium">
+              <button id="btn-ecg-grid-toggle" class="warm-btn warm-btn-secondary py-1 px-3 text-xs">
                 Grid: On
               </button>
             </div>
@@ -692,12 +779,12 @@
           </div>
 
           <!-- Calibration & Trace Parameters Footer -->
-          <div class="mt-3 flex items-center justify-between text-[11px] text-slate-500 font-mono border-t border-slate-100 pt-2">
+          <div class="flex items-center justify-between text-[11px] text-[#78736B] font-mono border-t border-[#ECE8DF] pt-3">
             <div>CALIBRATION: 10mm/1mV &bull; 25mm/s &bull; Filter: 0.5 - 40 Hz &bull; Notch: 50 Hz</div>
             <div class="flex items-center space-x-4">
-              <span>RMSSD: <b id="ecg-rmssd-sub" class="text-slate-800 font-bold">42 ms</b></span>
-              <span>SDNN: <b id="ecg-sdnn-sub" class="text-slate-800 font-bold">51 ms</b></span>
-              <span class="text-emerald-600 font-bold">&bull; LEAD II READY</span>
+              <span>RMSSD: <b id="ecg-rmssd-sub" class="text-[#18181B] font-bold">42 ms</b></span>
+              <span>SDNN: <b id="ecg-sdnn-sub" class="text-[#18181B] font-bold">51 ms</b></span>
+              <span class="text-[#15803D] font-bold">&bull; LEAD II READY</span>
             </div>
           </div>
         </div>
@@ -705,65 +792,65 @@
       </section>
 
       <!-- =====================================================================
-           VIEW 4: LIVE PPG & SPO2
+           VIEW 4: LIVE PPG & SPO2 (WARM EDITORIAL DESIGN)
            ===================================================================== -->
       <section id="view-ppg" class="view-panel hidden space-y-6">
         
         <!-- PPG Header & Oxygenation Summary -->
-        <div class="glass-panel p-4 flex flex-col md:flex-row items-center justify-between gap-4 bg-white">
-          <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center">
-              <i data-lucide="waves" class="w-5 h-5 text-blue-600"></i>
+        <div class="content-card rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 bg-white">
+          <div class="flex items-center space-x-3.5">
+            <div class="w-10 h-10 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF] flex items-center justify-center text-[#18181B]">
+              <i data-lucide="waves" class="w-5 h-5 text-[#1D4ED8]"></i>
             </div>
             <div>
-              <h2 class="text-sm font-bold text-slate-900 tracking-wide">Photoplethysmogram (PPG) Dual Wavelength Oscilloscope</h2>
-              <p class="text-xs text-slate-500">MAX30102 / Pulse Sensor Telemetry &bull; Red (660nm) & Infrared (880nm) Spectrophotometry</p>
+              <h2 class="text-base font-bold text-[#18181B] tracking-tight">Photoplethysmogram (PPG) Dual Wavelength Oscilloscope</h2>
+              <p class="text-xs text-[#59554E]">MAX30102 / Pulse Sensor Telemetry &bull; Red (660nm) & Infrared (880nm) Spectrophotometry</p>
             </div>
           </div>
 
-          <div class="flex items-center space-x-4 font-mono text-xs">
-            <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span class="text-slate-500 font-medium">SpO2:</span>
-              <span id="ppg-spo2-value" class="text-blue-600 font-bold ml-1 text-sm">98.5%</span>
+          <div class="flex items-center space-x-3 font-mono text-xs">
+            <div class="warm-pill">
+              <span class="text-[#78736B]">SpO2:</span>
+              <span id="ppg-spo2-value" class="text-[#1D4ED8] font-bold ml-1 text-sm">98.5%</span>
             </div>
-            <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span class="text-slate-500 font-medium">PERFUSION (PI):</span>
-              <span id="ppg-pi-value" class="text-slate-800 font-bold ml-1">4.2%</span>
+            <div class="warm-pill">
+              <span class="text-[#78736B]">PERFUSION (PI):</span>
+              <span id="ppg-pi-value" class="text-[#18181B] font-bold ml-1">4.2%</span>
             </div>
-            <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span class="text-slate-500 font-medium">PROBE STATUS:</span>
-              <span id="ppg-sensor-status" class="text-emerald-600 font-bold ml-1">CONTACT GOOD</span>
+            <div class="warm-pill">
+              <span class="text-[#78736B]">PROBE:</span>
+              <span id="ppg-sensor-status" class="text-[#15803D] font-bold ml-1">CONTACT GOOD</span>
             </div>
           </div>
         </div>
 
         <!-- Full-Width Dual Channel PPG Oscilloscope Screen -->
-        <div class="glass-panel p-4 bg-white">
+        <div class="content-card rounded-3xl p-6 bg-white space-y-4">
           
-          <div class="flex flex-wrap items-center justify-between gap-3 mb-3 text-xs">
+          <div class="flex flex-wrap items-center justify-between gap-3 text-xs">
             <div class="flex items-center space-x-3 font-mono">
-              <span class="text-slate-500 font-semibold">CHANNELS:</span>
-              <label class="flex items-center space-x-1.5 text-blue-600 cursor-pointer font-medium">
-                <input type="checkbox" id="ppg-toggle-ir" checked class="rounded border-slate-300">
+              <span class="text-[#78736B] font-semibold">CHANNELS:</span>
+              <label class="flex items-center space-x-1.5 text-[#1D4ED8] cursor-pointer font-medium">
+                <input type="checkbox" id="ppg-toggle-ir" checked class="rounded border-[#DDD8CC]">
                 <span>IR (880nm Arterial)</span>
               </label>
-              <label class="flex items-center space-x-1.5 text-rose-600 cursor-pointer font-medium">
-                <input type="checkbox" id="ppg-toggle-red" checked class="rounded border-slate-300">
+              <label class="flex items-center space-x-1.5 text-[#BE123C] cursor-pointer font-medium">
+                <input type="checkbox" id="ppg-toggle-red" checked class="rounded border-[#DDD8CC]">
                 <span>Red (660nm Venous)</span>
               </label>
             </div>
 
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-3">
               <div class="flex items-center space-x-1.5 font-mono">
-                <span class="text-slate-500 font-semibold">GAIN:</span>
-                <select id="select-ppg-gain" class="px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs focus:outline-none font-medium">
+                <span class="text-[#78736B] font-semibold">GAIN:</span>
+                <select id="select-ppg-gain" class="px-3 py-1 rounded-xl bg-[#FAF9F5] border border-[#DDD8CC] text-[#18181B] text-xs focus:outline-none font-medium">
                   <option value="0.5">0.5x</option>
                   <option value="1.0" selected>1.0x</option>
                   <option value="2.0">2.0x</option>
                   <option value="5.0">5.0x</option>
                 </select>
               </div>
-              <button id="btn-ppg-peak-toggle" class="px-3 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 font-medium">
+              <button id="btn-ppg-peak-toggle" class="warm-btn warm-btn-secondary py-1 px-3 text-xs">
                 Systolic Peaks: On
               </button>
             </div>
@@ -773,16 +860,16 @@
             <canvas id="canvas-full-ppg" class="scope-canvas"></canvas>
           </div>
 
-          <div class="mt-3 flex items-center justify-between text-[11px] text-slate-500 font-mono border-t border-slate-100 pt-2">
-            <div>RATIO-OF-RATIOS (R): <b id="ppg-ror-calc" class="text-slate-800 font-bold">0.58</b> &bull; AC/DC IR: <b id="ppg-acdc-ir" class="text-slate-800 font-bold">0.038</b> &bull; AC/DC Red: <b id="ppg-acdc-red" class="text-slate-800 font-bold">0.022</b></div>
-            <div class="text-blue-600 font-bold">&bull; OPTICAL PROBE CALIBRATED</div>
+          <div class="flex items-center justify-between text-[11px] text-[#78736B] font-mono border-t border-[#ECE8DF] pt-3">
+            <div>RATIO-OF-RATIOS (R): <b id="ppg-ror-calc" class="text-[#18181B] font-bold">0.58</b> &bull; AC/DC IR: <b id="ppg-acdc-ir" class="text-[#18181B] font-bold">0.038</b> &bull; AC/DC Red: <b id="ppg-acdc-red" class="text-[#18181B] font-bold">0.022</b></div>
+            <div class="text-[#1D4ED8] font-bold">&bull; OPTICAL PROBE CALIBRATED</div>
           </div>
         </div>
 
       </section>
 
       <!-- =====================================================================
-           VIEW 5: HEALTH ANALYTICS & BP (BENTO LAYOUT - LIGHT THEME)
+           VIEW 5: HEALTH ANALYTICS & BP (GULLAK WARM EDITORIAL DESIGN)
            ===================================================================== -->
       <section id="view-analytics" class="view-panel hidden space-y-6">
         
@@ -791,82 +878,82 @@
           <!-- Continuous Blood Pressure Analysis & PAT Model (2 cols) -->
           <div class="lg:col-span-2 space-y-6">
             
-            <div class="glass-panel p-5 bg-white">
-              <div class="flex items-center justify-between mb-4">
+            <div class="content-card rounded-3xl p-6 bg-white space-y-5">
+              <div class="flex items-center justify-between pb-3 border-b border-[#ECE8DF]">
                 <div class="flex items-center space-x-3">
-                  <div class="w-9 h-9 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center">
-                    <i data-lucide="gauge" class="w-5 h-5 text-purple-600"></i>
+                  <div class="w-9 h-9 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF] flex items-center justify-center text-[#18181B]">
+                    <i data-lucide="gauge" class="w-4 h-4"></i>
                   </div>
                   <div>
-                    <h3 class="font-bold text-sm text-slate-900 tracking-wide">Cuffless Blood Pressure Estimation</h3>
-                    <p class="text-xs text-slate-500">Pulse Arrival Time (PAT) regression & physiological feature model</p>
+                    <h3 class="font-bold text-sm text-[#18181B] tracking-tight">Cuffless Blood Pressure Estimation</h3>
+                    <p class="text-xs text-[#59554E]">Pulse Arrival Time (PAT) regression &amp; physiological feature model</p>
                   </div>
                 </div>
-                <span class="px-2.5 py-0.5 rounded-full text-xs font-mono bg-purple-50 text-purple-700 border border-purple-200 font-semibold">
-                  AAMI/ISO Compliant
+                <span class="px-2.5 py-1 rounded-full text-xs font-mono bg-[#FAF9F5] text-[#59554E] border border-[#ECE8DF] font-semibold">
+                  AAMI / ISO Compliant
                 </span>
               </div>
 
               <!-- Systolic / Diastolic Gauges -->
-              <div class="grid grid-cols-2 gap-4 mb-6">
-                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
-                  <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Estimated Systolic</span>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF] flex flex-col justify-between">
+                  <span class="text-xs text-[#78736B] font-bold uppercase tracking-wider">Estimated Systolic</span>
                   <div class="my-2 flex items-baseline space-x-2">
-                    <span id="analytics-sys-val" class="text-4xl font-extrabold hud-mono text-purple-700">118</span>
-                    <span class="text-xs text-slate-500 font-mono font-medium">mmHg</span>
+                    <span id="analytics-sys-val" class="text-4xl font-extrabold hud-mono text-[#18181B]">118</span>
+                    <span class="text-xs text-[#59554E] font-mono font-medium">mmHg</span>
                   </div>
-                  <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                    <div id="analytics-sys-bar" class="bg-gradient-to-r from-emerald-500 to-purple-500 h-full w-[55%]"></div>
+                  <div class="w-full bg-[#ECE8DF] h-2 rounded-full overflow-hidden">
+                    <div id="analytics-sys-bar" class="bg-[#18181B] h-full w-[55%]"></div>
                   </div>
                 </div>
 
-                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
-                  <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Estimated Diastolic</span>
+                <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF] flex flex-col justify-between">
+                  <span class="text-xs text-[#78736B] font-bold uppercase tracking-wider">Estimated Diastolic</span>
                   <div class="my-2 flex items-baseline space-x-2">
-                    <span id="analytics-dia-val" class="text-4xl font-extrabold hud-mono text-purple-600">78</span>
-                    <span class="text-xs text-slate-500 font-mono font-medium">mmHg</span>
+                    <span id="analytics-dia-val" class="text-4xl font-extrabold hud-mono text-[#18181B]">78</span>
+                    <span class="text-xs text-[#59554E] font-mono font-medium">mmHg</span>
                   </div>
-                  <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                    <div id="analytics-dia-bar" class="bg-gradient-to-r from-blue-500 to-purple-400 h-full w-[45%]"></div>
+                  <div class="w-full bg-[#ECE8DF] h-2 rounded-full overflow-hidden">
+                    <div id="analytics-dia-bar" class="bg-[#59554E] h-full w-[45%]"></div>
                   </div>
                 </div>
               </div>
 
               <!-- Hemodynamic & Vascular Parameters Table -->
-              <div class="overflow-x-auto">
+              <div class="overflow-x-auto pt-2">
                 <table class="w-full text-left text-xs font-mono">
                   <thead>
-                    <tr class="border-b border-slate-200 text-slate-500 font-semibold">
-                      <th class="pb-2">Parameter</th>
-                      <th class="pb-2">Current Value</th>
-                      <th class="pb-2">Reference Range</th>
-                      <th class="pb-2">Status</th>
+                    <tr class="border-b border-[#ECE8DF] text-[#78736B] font-semibold">
+                      <th class="pb-2.5">Parameter</th>
+                      <th class="pb-2.5">Current Value</th>
+                      <th class="pb-2.5">Reference Range</th>
+                      <th class="pb-2.5">Status</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-slate-100 text-slate-700">
+                  <tbody class="divide-y divide-[#ECE8DF] text-[#18181B]">
                     <tr>
                       <td class="py-2.5 font-medium">Pulse Arrival Time (PAT)</td>
-                      <td id="table-pat" class="font-bold text-amber-600">224 ms</td>
-                      <td class="text-slate-500">200 - 280 ms</td>
-                      <td><span class="text-emerald-600 font-semibold">Optimal</span></td>
+                      <td id="table-pat" class="font-bold text-[#B45309]">224 ms</td>
+                      <td class="text-[#59554E]">200 - 280 ms</td>
+                      <td><span class="text-[#15803D] font-semibold">Optimal</span></td>
                     </tr>
                     <tr>
                       <td class="py-2.5 font-medium">Mean Arterial Pressure (MAP)</td>
-                      <td id="table-map" class="font-bold text-slate-900">91.3 mmHg</td>
-                      <td class="text-slate-500">70 - 105 mmHg</td>
-                      <td><span class="text-emerald-600 font-semibold">Normal</span></td>
+                      <td id="table-map" class="font-bold text-[#18181B]">91.3 mmHg</td>
+                      <td class="text-[#59554E]">70 - 105 mmHg</td>
+                      <td><span class="text-[#15803D] font-semibold">Normal</span></td>
                     </tr>
                     <tr>
                       <td class="py-2.5 font-medium">Pulse Pressure (PP)</td>
-                      <td id="table-pp" class="font-bold text-slate-900">40 mmHg</td>
-                      <td class="text-slate-500">30 - 50 mmHg</td>
-                      <td><span class="text-emerald-600 font-semibold">Compliant</span></td>
+                      <td id="table-pp" class="font-bold text-[#18181B]">40 mmHg</td>
+                      <td class="text-[#59554E]">30 - 50 mmHg</td>
+                      <td><span class="text-[#15803D] font-semibold">Compliant</span></td>
                     </tr>
                     <tr>
                       <td class="py-2.5 font-medium">Vascular Stiffness Index</td>
-                      <td class="font-bold text-slate-900">6.8 m/s</td>
-                      <td class="text-slate-500">&lt; 10 m/s</td>
-                      <td><span class="text-emerald-600 font-semibold">Healthy</span></td>
+                      <td class="font-bold text-[#18181B]">6.8 m/s</td>
+                      <td class="text-[#59554E]">&lt; 10 m/s</td>
+                      <td><span class="text-[#15803D] font-semibold">Healthy</span></td>
                     </tr>
                   </tbody>
                 </table>
@@ -875,25 +962,27 @@
             </div>
 
             <!-- Respiration Derivation Card -->
-            <div class="glass-panel p-5 bg-white">
-              <div class="flex items-center justify-between mb-3">
-                <h3 class="font-bold text-sm text-slate-900 tracking-wide">Dual-Derived Respiratory Telemetry</h3>
-                <span class="text-xs font-mono text-sky-600 font-semibold" id="analytics-resp-status">16 BrPM &bull; Regular Eupnea</span>
+            <div class="content-card rounded-3xl p-6 bg-white space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#ECE8DF]">
+                <div>
+                  <h3 class="font-bold text-sm text-[#18181B] tracking-tight">Dual-Derived Respiratory Telemetry</h3>
+                  <p class="text-xs text-[#59554E]">Combines ECG-Derived Respiration (EDR) and Photoplethysmogram baseline variations.</p>
+                </div>
+                <span class="text-xs font-mono text-[#0284C7] font-semibold px-2.5 py-1 rounded-full bg-[#F0F9FF] border border-[#BAE6FD]" id="analytics-resp-status">16 BrPM &bull; Regular Eupnea</span>
               </div>
-              <p class="text-xs text-slate-500 mb-4">Combines ECG-Derived Respiration (EDR) and Photoplethysmogram baseline variations.</p>
               
               <div class="grid grid-cols-3 gap-4 text-center">
-                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                  <div class="text-[11px] text-slate-500 font-medium">ECG Derivation (EDR)</div>
-                  <div id="edr-bpm" class="text-lg font-bold text-sky-600 hud-mono mt-1">16.2 BrPM</div>
+                <div class="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF]">
+                  <div class="text-[11px] text-[#78736B] font-medium uppercase tracking-wider">ECG Derivation (EDR)</div>
+                  <div id="edr-bpm" class="text-lg font-bold text-[#18181B] hud-mono mt-1">16.2 BrPM</div>
                 </div>
-                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                  <div class="text-[11px] text-slate-500 font-medium">PPG Baseline Swing</div>
-                  <div id="ppg-resp-bpm" class="text-lg font-bold text-sky-600 hud-mono mt-1">15.8 BrPM</div>
+                <div class="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF]">
+                  <div class="text-[11px] text-[#78736B] font-medium uppercase tracking-wider">PPG Baseline Swing</div>
+                  <div id="ppg-resp-bpm" class="text-lg font-bold text-[#18181B] hud-mono mt-1">15.8 BrPM</div>
                 </div>
-                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                  <div class="text-[11px] text-slate-500 font-medium">Rhythm Symmetry</div>
-                  <div class="text-lg font-bold text-emerald-600 hud-mono mt-1">96% High</div>
+                <div class="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF]">
+                  <div class="text-[11px] text-[#78736B] font-medium uppercase tracking-wider">Rhythm Symmetry</div>
+                  <div class="text-lg font-bold text-[#15803D] hud-mono mt-1">96% High</div>
                 </div>
               </div>
             </div>
@@ -903,57 +992,57 @@
           <!-- HRV Autonomic Dynamics & Poincaré Plot (1 col) -->
           <div class="space-y-6">
             
-            <div class="glass-panel p-5 bg-white">
-              <div class="flex items-center justify-between mb-3">
-                <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500">Poincaré Plot (RR[n] vs RR[n+1])</h3>
-                <span class="text-[10px] font-mono text-blue-600 font-semibold">AUTONOMIC DYNAMICS</span>
+            <div class="content-card rounded-3xl p-6 bg-white space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#ECE8DF]">
+                <h3 class="font-bold text-xs uppercase tracking-wider text-[#78736B]">Poincaré Plot (RR[n] vs RR[n+1])</h3>
+                <span class="text-[10px] font-mono text-[#18181B] font-semibold px-2 py-0.5 rounded-md bg-[#FAF9F5] border border-[#ECE8DF]">AUTONOMIC DYNAMICS</span>
               </div>
               
               <!-- Poincaré Canvas -->
-              <div class="w-full h-56 rounded-2xl bg-slate-950 border border-slate-200 relative overflow-hidden flex items-center justify-center">
+              <div class="w-full h-56 rounded-2xl bg-[#0b0f17] border border-[#ECE8DF] relative overflow-hidden flex items-center justify-center">
                 <canvas id="canvas-poincare" width="280" height="224" class="w-full h-full"></canvas>
               </div>
 
               <!-- HRV Dispersion Parameters -->
-              <div class="mt-4 grid grid-cols-2 gap-3 text-xs font-mono">
-                <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-                  <span class="text-slate-500 text-[10px] block font-medium">SD1 (Instantaneous)</span>
-                  <span id="poincare-sd1" class="text-blue-600 font-bold">30.2 ms</span>
+              <div class="grid grid-cols-2 gap-3 text-xs font-mono">
+                <div class="p-3 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF]">
+                  <span class="text-[#78736B] text-[10px] block font-medium">SD1 (Instantaneous)</span>
+                  <span id="poincare-sd1" class="text-[#18181B] font-bold text-sm">30.2 ms</span>
                 </div>
-                <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-                  <span class="text-slate-500 text-[10px] block font-medium">SD2 (Long-term)</span>
-                  <span id="poincare-sd2" class="text-blue-600 font-bold">72.4 ms</span>
+                <div class="p-3 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF]">
+                  <span class="text-[#78736B] text-[10px] block font-medium">SD2 (Long-term)</span>
+                  <span id="poincare-sd2" class="text-[#18181B] font-bold text-sm">72.4 ms</span>
                 </div>
               </div>
             </div>
 
             <!-- Autonomic Stress Index & Balance -->
-            <div class="glass-panel p-5 bg-white">
-              <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500 mb-3">Autonomic Tone & Baevsky Stress</h3>
+            <div class="content-card rounded-3xl p-6 bg-white space-y-4">
+              <h3 class="font-bold text-xs uppercase tracking-wider text-[#78736B] pb-3 border-b border-[#ECE8DF]">Autonomic Tone &amp; Baevsky Stress</h3>
               
-              <div class="space-y-3 text-xs">
+              <div class="space-y-4 text-xs">
                 <div>
-                  <div class="flex justify-between mb-1">
-                    <span class="text-slate-600 font-medium">Sympatho-Vagal (LF / HF Ratio):</span>
-                    <span id="hrv-lf-hf" class="font-mono text-slate-900 font-bold">1.45 (Balanced)</span>
+                  <div class="flex justify-between mb-1.5 font-medium">
+                    <span class="text-[#59554E]">Sympatho-Vagal (LF / HF Ratio):</span>
+                    <span id="hrv-lf-hf" class="font-mono text-[#18181B] font-bold">1.45 (Balanced)</span>
                   </div>
-                  <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden flex">
-                    <div class="bg-blue-500 h-full w-[45%]" title="Parasympathetic (HF)"></div>
-                    <div class="bg-amber-500 h-full w-[55%]" title="Sympathetic (LF)"></div>
+                  <div class="w-full bg-[#ECE8DF] h-2 rounded-full overflow-hidden flex">
+                    <div class="bg-[#18181B] h-full w-[45%]" title="Parasympathetic (HF)"></div>
+                    <div class="bg-[#78736B] h-full w-[55%]" title="Sympathetic (LF)"></div>
                   </div>
-                  <div class="flex justify-between text-[10px] text-slate-500 font-mono mt-1">
+                  <div class="flex justify-between text-[10px] text-[#78736B] font-mono mt-1.5">
                     <span>Vagal (HF 45%)</span>
                     <span>Sympathetic (LF 55%)</span>
                   </div>
                 </div>
 
-                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF] flex items-center justify-between">
                   <div>
-                    <div class="text-[11px] text-slate-500 font-medium">Baevsky Stress Index</div>
-                    <div id="stress-index-val" class="text-base font-bold text-emerald-700 hud-mono">68 SI</div>
+                    <div class="text-[11px] text-[#78736B] font-medium uppercase tracking-wider">Baevsky Stress Index</div>
+                    <div id="stress-index-val" class="text-base font-bold text-[#18181B] hud-mono mt-0.5">68 SI</div>
                   </div>
-                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
-                    RELAXED / HOMEOPATHIC
+                  <span class="px-2.5 py-1 rounded-full text-[10px] font-mono bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0] font-semibold">
+                    RELAXED / OPTIMAL
                   </span>
                 </div>
               </div>
@@ -966,30 +1055,30 @@
       </section>
 
       <!-- =====================================================================
-           VIEW 6: SESSION HISTORY (LIGHT THEME)
+           VIEW 6: SESSION HISTORY (GULLAK WARM EDITORIAL DESIGN)
            ===================================================================== -->
       <section id="view-history" class="view-panel hidden space-y-6">
         
-        <div class="glass-panel p-5 flex flex-col md:flex-row items-center justify-between gap-4 bg-white">
+        <div class="content-card rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 bg-white">
           <div>
-            <h2 class="text-base font-bold text-slate-900 tracking-tight">Archived Clinical Sessions</h2>
-            <p class="text-xs text-slate-500">Database archive of synchronized ECG, PPG, SpO2, and facial access sessions.</p>
+            <h2 class="text-base font-bold text-[#18181B] tracking-tight">Archived Clinical Sessions</h2>
+            <p class="text-xs text-[#59554E]">Database archive of synchronized ECG, PPG, SpO2, and facial access sessions.</p>
           </div>
 
           <div class="flex items-center space-x-3">
-            <input type="text" id="history-search" placeholder="Search by name or Session ID..." class="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-blue-500 w-64 font-medium">
-            <button id="btn-refresh-history" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors">
+            <input type="text" id="history-search" placeholder="Search by name or Session ID..." class="px-3.5 py-2 rounded-xl bg-[#FAF9F5] border border-[#DDD8CC] text-xs text-[#18181B] focus:outline-none focus:border-[#18181B] w-64 font-medium">
+            <button id="btn-refresh-history" class="warm-btn warm-btn-secondary py-2 px-3.5 text-xs">
               <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
             </button>
           </div>
         </div>
 
-        <!-- Sessions Data Table (Airbnb Clean Card Table) -->
-        <div class="glass-panel overflow-hidden bg-white">
+        <!-- Sessions Data Table (Gullak Clean Card Table) -->
+        <div class="content-card rounded-3xl overflow-hidden bg-white">
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs font-mono">
               <thead>
-                <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[11px] font-bold">
+                <tr class="bg-[#FAF9F5] border-b border-[#ECE8DF] text-[#78736B] uppercase text-[11px] font-bold">
                   <th class="p-3.5">Session ID</th>
                   <th class="p-3.5">Participant</th>
                   <th class="p-3.5">Type</th>
@@ -1001,13 +1090,13 @@
                   <th class="p-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody id="sessions-table-body" class="divide-y divide-slate-100 text-slate-700">
+              <tbody id="sessions-table-body" class="divide-y divide-[#ECE8DF] text-[#18181B]">
                 <!-- Dynamically populated rows -->
               </tbody>
             </table>
           </div>
           
-          <div id="sessions-empty-state" class="hidden p-8 text-center text-slate-500 text-xs">
+          <div id="sessions-empty-state" class="hidden p-8 text-center text-[#78736B] text-xs">
             No session records found. Start a new session via the sidebar to persist telemetry.
           </div>
         </div>
@@ -1015,70 +1104,70 @@
       </section>
 
       <!-- =====================================================================
-           VIEW 7: REPORTS & EXPORT
+           VIEW 7: REPORTS & EXPORT (GULLAK WARM EDITORIAL DESIGN)
            ===================================================================== -->
       <section id="view-reports" class="view-panel hidden space-y-6">
         
-        <div class="glass-panel p-5 flex flex-col md:flex-row items-center justify-between gap-4 bg-white">
+        <div class="content-card rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 bg-white">
           <div>
-            <h2 class="text-base font-bold text-slate-900 tracking-tight">Clinical Telemetry Report & Data Export</h2>
-            <p class="text-xs text-slate-500">Generate formatted clinical documentation and download research-grade raw CSV timeseries data.</p>
+            <h2 class="text-base font-bold text-[#18181B] tracking-tight">Clinical Telemetry Report &amp; Data Export</h2>
+            <p class="text-xs text-[#59554E]">Generate formatted clinical documentation and download research-grade raw CSV timeseries data.</p>
           </div>
 
           <div class="flex items-center space-x-3">
-            <button id="btn-export-raw-csv" class="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center gap-1.5 transition-colors">
-              <i data-lucide="download" class="w-4 h-4"></i> Export Raw Telemetry CSV
+            <button id="btn-export-raw-csv" class="warm-btn warm-btn-primary py-2 px-3.5 text-xs">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Export Raw CSV
             </button>
-            <button id="btn-export-metrics-csv" class="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold flex items-center gap-1.5 transition-colors">
-              <i data-lucide="table" class="w-4 h-4"></i> Export Metrics CSV
+            <button id="btn-export-metrics-csv" class="warm-btn warm-btn-secondary py-2 px-3.5 text-xs">
+              <i data-lucide="table" class="w-3.5 h-3.5"></i> Export Metrics CSV
             </button>
-            <button id="btn-print-report" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors">
-              <i data-lucide="printer" class="w-4 h-4"></i> Print Document
+            <button id="btn-print-report" class="warm-btn warm-btn-secondary py-2 px-3.5 text-xs">
+              <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print Document
             </button>
           </div>
         </div>
 
-        <!-- Clinical Report Document Preview (Apple Health PDF Style) -->
-        <div class="glass-panel p-8 max-w-4xl mx-auto space-y-6 border-slate-200 bg-white text-slate-900 font-sans shadow-sm" id="printable-report">
+        <!-- Clinical Report Document Preview (Gullak Editorial Paper Style) -->
+        <div class="content-card rounded-3xl p-8 max-w-4xl mx-auto space-y-6 bg-white text-[#18181B] font-sans" id="printable-report">
           
           <!-- Document Header -->
-          <div class="border-b border-slate-200 pb-5 flex items-center justify-between">
+          <div class="border-b border-[#ECE8DF] pb-5 flex items-center justify-between">
             <div>
-              <h1 class="text-xl font-bold tracking-tight text-slate-900">CLINICAL TELEMETRY & MULTIMODAL REPORT</h1>
-              <p class="text-xs text-blue-600 font-mono mt-0.5 font-semibold">ESA AUTOMATED PHYSIOLOGICAL MONITORING SYSTEM</p>
+              <h1 class="text-xl font-bold tracking-tight text-[#18181B]">CLINICAL TELEMETRY &amp; MULTIMODAL REPORT</h1>
+              <p class="text-xs text-[#59554E] font-mono mt-0.5 font-semibold">ESA AUTOMATED PHYSIOLOGICAL MONITORING SYSTEM</p>
             </div>
-            <div class="text-right text-xs font-mono text-slate-500">
-              <div>REPORT ID: <span id="rep-id" class="text-slate-900 font-bold">REP-2026-X8</span></div>
-              <div>DATE: <span id="rep-date" class="text-slate-900 font-bold">2026-10-13 22:00 UTC</span></div>
+            <div class="text-right text-xs font-mono text-[#78736B]">
+              <div>REPORT ID: <span id="rep-id" class="text-[#18181B] font-bold">REP-2026-X8</span></div>
+              <div>DATE: <span id="rep-date" class="text-[#18181B] font-bold">2026-10-15 UTC</span></div>
             </div>
           </div>
 
           <!-- Subject Demographics -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-mono">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF] text-xs font-mono">
             <div>
-              <span class="text-slate-500 block text-[10px] font-medium">PATIENT / SUBJECT</span>
-              <span id="rep-name" class="font-bold text-slate-900 text-sm">Ashutosh</span>
+              <span class="text-[#78736B] block text-[10px] font-medium uppercase tracking-wider">PATIENT / SUBJECT</span>
+              <span id="rep-name" class="font-bold text-[#18181B] text-sm">Ashutosh</span>
             </div>
             <div>
-              <span class="text-slate-500 block text-[10px] font-medium">SESSION ID</span>
-              <span id="rep-session-id" class="font-bold text-slate-900 text-sm">sess_20261013</span>
+              <span class="text-[#78736B] block text-[10px] font-medium uppercase tracking-wider">SESSION ID</span>
+              <span id="rep-session-id" class="font-bold text-[#18181B] text-sm">sess_20261015</span>
             </div>
             <div>
-              <span class="text-slate-500 block text-[10px] font-medium">RECORDING DURATION</span>
-              <span id="rep-duration" class="font-bold text-slate-900 text-sm">00:15:32</span>
+              <span class="text-[#78736B] block text-[10px] font-medium uppercase tracking-wider">RECORDING DURATION</span>
+              <span id="rep-duration" class="font-bold text-[#18181B] text-sm">00:15:32</span>
             </div>
             <div>
-              <span class="text-slate-500 block text-[10px] font-medium">ACCESS VERIFICATION</span>
-              <span id="rep-access-status" class="font-bold text-emerald-700 text-sm">BIOMETRIC (VERIFIED)</span>
+              <span class="text-[#78736B] block text-[10px] font-medium uppercase tracking-wider">ACCESS VERIFICATION</span>
+              <span id="rep-access-status" class="font-bold text-[#15803D] text-sm">BIOMETRIC (VERIFIED)</span>
             </div>
           </div>
 
           <!-- Vitals Summary Table -->
           <div>
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Physiological Telemetry Summary</h3>
-            <table class="w-full text-left text-xs font-mono border border-slate-200 rounded-xl overflow-hidden">
-              <thead class="bg-slate-50 text-slate-600 font-semibold">
-                <tr class="border-b border-slate-200">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-[#78736B] mb-2">Physiological Telemetry Summary</h3>
+            <table class="w-full text-left text-xs font-mono border border-[#ECE8DF] rounded-xl overflow-hidden">
+              <thead class="bg-[#FAF9F5] text-[#59554E] font-semibold">
+                <tr class="border-b border-[#ECE8DF]">
                   <th class="p-2.5">Measurement</th>
                   <th class="p-2.5">Mean</th>
                   <th class="p-2.5">Min - Max</th>
@@ -1086,48 +1175,48 @@
                   <th class="p-2.5">Clinical Classification</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-100 text-slate-800">
+              <tbody class="divide-y divide-[#ECE8DF] text-[#18181B]">
                 <tr>
                   <td class="p-2.5 font-bold">Heart Rate (ECG)</td>
-                  <td class="p-2.5 text-emerald-700 font-bold">72.4 BPM</td>
+                  <td class="p-2.5 text-[#15803D] font-bold">72.4 BPM</td>
                   <td class="p-2.5">68 - 79 BPM</td>
                   <td class="p-2.5">2.8 BPM</td>
-                  <td class="p-2.5 text-emerald-700 font-medium">Normal Sinus Rhythm</td>
+                  <td class="p-2.5 text-[#15803D] font-medium">Normal Sinus Rhythm</td>
                 </tr>
                 <tr>
                   <td class="p-2.5 font-bold">Blood Oxygen (SpO2)</td>
-                  <td class="p-2.5 text-blue-700 font-bold">98.2%</td>
+                  <td class="p-2.5 text-[#1D4ED8] font-bold">98.2%</td>
                   <td class="p-2.5">97.5 - 99.1%</td>
                   <td class="p-2.5">0.4%</td>
-                  <td class="p-2.5 text-emerald-700 font-medium">Normoxic</td>
+                  <td class="p-2.5 text-[#15803D] font-medium">Normoxic</td>
                 </tr>
                 <tr>
                   <td class="p-2.5 font-bold">Est. Blood Pressure</td>
-                  <td class="p-2.5 text-purple-700 font-bold">118 / 78 mmHg</td>
+                  <td class="p-2.5 text-[#7C3AED] font-bold">118 / 78 mmHg</td>
                   <td class="p-2.5">114/74 - 122/82</td>
                   <td class="p-2.5">3.1 / 2.4</td>
-                  <td class="p-2.5 text-emerald-700 font-medium">Optimal (< 120/80)</td>
+                  <td class="p-2.5 text-[#15803D] font-medium">Optimal (&lt; 120/80)</td>
                 </tr>
                 <tr>
                   <td class="p-2.5 font-bold">Respiration Rate</td>
-                  <td class="p-2.5 text-sky-700 font-bold">15.8 BrPM</td>
+                  <td class="p-2.5 text-[#0284C7] font-bold">15.8 BrPM</td>
                   <td class="p-2.5">14 - 18 BrPM</td>
                   <td class="p-2.5">1.1 BrPM</td>
-                  <td class="p-2.5 text-emerald-700 font-medium">Eupneic Range</td>
+                  <td class="p-2.5 text-[#15803D] font-medium">Eupneic Range</td>
                 </tr>
                 <tr>
                   <td class="p-2.5 font-bold">Pulse Arrival Time (PAT)</td>
-                  <td class="p-2.5 text-amber-700 font-bold">226 ms</td>
+                  <td class="p-2.5 text-[#B45309] font-bold">226 ms</td>
                   <td class="p-2.5">218 - 238 ms</td>
                   <td class="p-2.5">5.2 ms</td>
-                  <td class="p-2.5 text-emerald-700 font-medium">Normal Arterial Elasticity</td>
+                  <td class="p-2.5 text-[#15803D] font-medium">Normal Arterial Elasticity</td>
                 </tr>
                 <tr>
                   <td class="p-2.5 font-bold">HRV RMSSD</td>
-                  <td class="p-2.5 text-teal-700 font-bold">43.2 ms</td>
+                  <td class="p-2.5 text-[#0D9488] font-bold">43.2 ms</td>
                   <td class="p-2.5">36.0 - 54.2 ms</td>
                   <td class="p-2.5">4.8 ms</td>
-                  <td class="p-2.5 text-emerald-700 font-medium">Balanced Vagal Tone</td>
+                  <td class="p-2.5 text-[#15803D] font-medium">Balanced Vagal Tone</td>
                 </tr>
               </tbody>
             </table>
@@ -1135,20 +1224,20 @@
 
           <!-- Diagnostic Assessment Findings -->
           <div class="space-y-2 text-xs">
-            <h3 class="font-bold uppercase tracking-wider text-slate-500">Physiological & Diagnostic Assessment</h3>
-            <p class="text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <h3 class="font-bold uppercase tracking-wider text-[#78736B]">Physiological &amp; Diagnostic Assessment</h3>
+            <p class="text-[#18181B] leading-relaxed bg-[#FAF9F5] p-4 rounded-2xl border border-[#ECE8DF]">
               The continuous acquisition demonstrates stable cardiac electrical conduction with standard P-QRS-T complexes. No premature ventricular contractions (PVCs) or sustained ST-elevation episodes were observed during the recording window. Photoplethysmographic perfusion index remained robust (PI &gt; 3.5%) with consistent dicrotic notch delineation. Cuffless blood pressure correlates with normotensive parameters.
             </p>
           </div>
 
           <!-- Signature Footer -->
-          <div class="border-t border-slate-200 pt-5 flex justify-between items-end text-xs font-mono text-slate-500">
+          <div class="border-t border-[#ECE8DF] pt-5 flex justify-between items-end text-xs font-mono text-[#78736B]">
             <div>
-              <div>ESA CLINICAL BIOSIGNALS DIVISION</div>
+              <div class="font-bold text-[#18181B]">ESA CLINICAL BIOSIGNALS DIVISION</div>
               <div>ACQUISITION ENGINE: 100 Hz HARDWARE RING BUFFER</div>
             </div>
             <div class="text-right">
-              <div class="w-40 border-b border-slate-300 mb-1"></div>
+              <div class="w-40 border-b border-[#DDD8CC] mb-1"></div>
               <div>MEDICAL OFFICER VERIFICATION</div>
             </div>
           </div>
@@ -1158,34 +1247,34 @@
       </section>
 
       <!-- =====================================================================
-           VIEW 8: SETTINGS & SIMULATOR
+           VIEW 8: SETTINGS & SIMULATOR (GULLAK WARM EDITORIAL DESIGN)
            ===================================================================== -->
       <section id="view-settings" class="view-panel hidden space-y-6">
         
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
           <!-- Hardware Serial Port & Physical Connection Panel -->
-          <div class="glass-panel p-5 space-y-4 bg-white">
-            <div class="flex items-center space-x-3 mb-2">
-              <div class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center">
-                <i data-lucide="cpu" class="w-5 h-5 text-blue-600"></i>
+          <div class="content-card rounded-3xl p-6 space-y-5 bg-white">
+            <div class="flex items-center space-x-3 pb-3 border-b border-[#ECE8DF]">
+              <div class="w-9 h-9 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF] flex items-center justify-center text-[#18181B]">
+                <i data-lucide="cpu" class="w-4 h-4"></i>
               </div>
               <div>
-                <h3 class="font-bold text-sm text-slate-900 tracking-wide">Arduino Uno R3 Serial Telemetry</h3>
-                <p class="text-xs text-slate-500">Configure physical USB COM port or simulated UART bridge.</p>
+                <h3 class="font-bold text-sm text-[#18181B] tracking-tight">Arduino Uno R3 Serial Telemetry</h3>
+                <p class="text-xs text-[#59554E]">Configure physical USB COM port or simulated UART bridge.</p>
               </div>
             </div>
 
             <!-- Port Selection Dropdown -->
             <div class="space-y-1.5 text-xs">
-              <label class="block text-slate-700 font-semibold">Serial Port Selection</label>
+              <label class="block text-[#18181B] font-semibold">Serial Port Selection</label>
               <div class="flex gap-2">
-                <select id="select-serial-port" class="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-blue-500 font-mono font-medium">
+                <select id="select-serial-port" class="flex-1 px-3 py-2 rounded-xl bg-[#FAF9F5] border border-[#DDD8CC] text-[#18181B] text-xs focus:outline-none focus:border-[#18181B] font-mono font-medium">
                   <option value="AUTO">AUTO (Detect Arduino Uno)</option>
                   <option value="COM3">COM3 - Arduino Uno R3</option>
                   <option value="COM4">COM4 - USB Serial Port</option>
                 </select>
-                <button id="btn-scan-ports" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs transition-colors flex items-center gap-1 font-medium">
+                <button id="btn-scan-ports" class="warm-btn warm-btn-secondary px-3.5 py-2 text-xs">
                   <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Scan
                 </button>
               </div>
@@ -1193,8 +1282,8 @@
 
             <!-- Baud Rate -->
             <div class="space-y-1.5 text-xs">
-              <label class="block text-slate-700 font-semibold">Baud Rate</label>
-              <select id="select-baudrate" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs font-mono font-medium">
+              <label class="block text-[#18181B] font-semibold">Baud Rate</label>
+              <select id="select-baudrate" class="w-full px-3 py-2 rounded-xl bg-[#FAF9F5] border border-[#DDD8CC] text-[#18181B] text-xs font-mono font-medium">
                 <option value="115200" selected>115200 bps (Standard)</option>
                 <option value="57600">57600 bps</option>
                 <option value="9600">9600 bps</option>
@@ -1203,32 +1292,32 @@
 
             <!-- Connect / Disconnect Buttons -->
             <div class="flex gap-3 pt-2">
-              <button id="btn-connect-serial" class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shadow-sm">
+              <button id="btn-connect-serial" class="warm-btn warm-btn-primary flex-1 py-2.5 text-xs">
                 Connect Hardware Serial
               </button>
-              <button id="btn-disconnect-serial" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs transition-colors font-medium">
+              <button id="btn-disconnect-serial" class="warm-btn warm-btn-secondary px-4 py-2.5 text-xs">
                 Disconnect
               </button>
             </div>
 
             <!-- Hardware Mode Toggle -->
-            <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+            <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF] flex items-center justify-between text-xs">
               <div>
-                <div class="font-bold text-slate-800">Hardware Mock Mode</div>
-                <div class="text-[11px] text-slate-500">Generate synthetic 100 Hz ECG & PPG telemetry without physical Arduino.</div>
+                <div class="font-bold text-[#18181B]">Hardware Mock Mode</div>
+                <div class="text-[11px] text-[#59554E]">Generate synthetic 100 Hz ECG &amp; PPG telemetry without physical Arduino.</div>
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" id="toggle-mock-mode" checked class="sr-only peer">
-                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div class="w-11 h-6 bg-[#DDD8CC] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#DDD8CC] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#18181B]"></div>
               </label>
             </div>
 
             <!-- WebSocket URL Configuration -->
             <div class="space-y-1.5 text-xs pt-2">
-              <label class="block text-slate-700 font-semibold">Telemetry WebSocket Gateway</label>
+              <label class="block text-[#18181B] font-semibold">Telemetry WebSocket Gateway</label>
               <div class="flex gap-2">
-                <input type="text" id="ws-server-url" value="ws://localhost:8000/ws/telemetry" class="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs font-mono focus:outline-none focus:border-blue-500 font-medium">
-                <button id="btn-reconnect-ws" class="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold">
+                <input type="text" id="ws-server-url" value="ws://localhost:8000/ws/telemetry" class="flex-1 px-3 py-2 rounded-xl bg-[#FAF9F5] border border-[#DDD8CC] text-[#18181B] text-xs font-mono focus:outline-none focus:border-[#18181B] font-medium">
+                <button id="btn-reconnect-ws" class="warm-btn warm-btn-secondary px-3.5 py-2 text-xs">
                   Reconnect
                 </button>
               </div>
@@ -1236,26 +1325,26 @@
 
           </div>
 
-          <!-- Synthetic Hardware Telemetry Simulator Controls (Apple Settings Style) -->
-          <div class="glass-panel p-5 space-y-5 bg-white">
-            <div class="flex items-center space-x-3 mb-2">
-              <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center">
-                <i data-lucide="sliders" class="w-5 h-5 text-amber-600"></i>
+          <!-- Synthetic Hardware Telemetry Simulator Controls -->
+          <div class="content-card rounded-3xl p-6 space-y-5 bg-white">
+            <div class="flex items-center space-x-3 pb-3 border-b border-[#ECE8DF]">
+              <div class="w-9 h-9 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF] flex items-center justify-center text-[#18181B]">
+                <i data-lucide="sliders" class="w-4 h-4"></i>
               </div>
               <div>
-                <h3 class="font-bold text-sm text-slate-900 tracking-wide">Interactive Telemetry Simulator</h3>
-                <p class="text-xs text-slate-500">Inject clinical states, tachycardia, bradycardia, or sensor detachment faults.</p>
+                <h3 class="font-bold text-sm text-[#18181B] tracking-tight">Interactive Telemetry Simulator</h3>
+                <p class="text-xs text-[#59554E]">Inject clinical states, tachycardia, bradycardia, or sensor detachment faults.</p>
               </div>
             </div>
 
             <!-- Heart Rate Slider -->
             <div class="space-y-2">
               <div class="flex justify-between text-xs">
-                <span class="text-slate-700 font-semibold">Simulated Heart Rate:</span>
-                <span id="sim-hr-label" class="font-mono text-emerald-700 font-bold">72 BPM</span>
+                <span class="text-[#18181B] font-semibold">Simulated Heart Rate:</span>
+                <span id="sim-hr-label" class="font-mono text-[#15803D] font-bold">72 BPM</span>
               </div>
               <input type="range" id="sim-hr-slider" min="40" max="180" value="72" step="1">
-              <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+              <div class="flex justify-between text-[10px] text-[#78736B] font-mono">
                 <span>Bradycardia (40)</span>
                 <span>Normal (72)</span>
                 <span>Tachycardia (180)</span>
@@ -1265,11 +1354,11 @@
             <!-- Respiration Rate Slider -->
             <div class="space-y-2">
               <div class="flex justify-between text-xs">
-                <span class="text-slate-700 font-semibold">Simulated Respiration Rate:</span>
-                <span id="sim-resp-label" class="font-mono text-sky-700 font-bold">16 BrPM</span>
+                <span class="text-[#18181B] font-semibold">Simulated Respiration Rate:</span>
+                <span id="sim-resp-label" class="font-mono text-[#0284C7] font-bold">16 BrPM</span>
               </div>
               <input type="range" id="sim-resp-slider" min="8" max="32" value="16" step="1">
-              <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+              <div class="flex justify-between text-[10px] text-[#78736B] font-mono">
                 <span>Bradypnea (8)</span>
                 <span>Normal (16)</span>
                 <span>Tachypnea (32)</span>
@@ -1279,35 +1368,35 @@
             <!-- Noise & Motion Artifacts Slider -->
             <div class="space-y-2">
               <div class="flex justify-between text-xs">
-                <span class="text-slate-700 font-semibold">Baseline Motion Artifacts / Noise:</span>
-                <span id="sim-noise-label" class="font-mono text-slate-800 font-bold">2 %</span>
+                <span class="text-[#18181B] font-semibold">Baseline Motion Artifacts / Noise:</span>
+                <span id="sim-noise-label" class="font-mono text-[#18181B] font-bold">2 %</span>
               </div>
               <input type="range" id="sim-noise-slider" min="0" max="30" value="2" step="1">
             </div>
 
             <!-- Fault Injection Toggles -->
-            <div class="pt-2 border-t border-slate-200 space-y-3">
-              <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Sensor Fault Injections</h4>
+            <div class="pt-2 border-t border-[#ECE8DF] space-y-3">
+              <h4 class="text-xs font-bold text-[#78736B] uppercase tracking-wider">Sensor Fault Injections</h4>
               
-              <div class="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
+              <div class="flex items-center justify-between p-4 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF] text-xs">
                 <div>
-                  <span class="font-bold text-rose-600">ECG Leads-Off Fault</span>
-                  <p class="text-[11px] text-slate-500">Triggers LO+ / LO- electrode detachment alert and flatline.</p>
+                  <span class="font-bold text-[#BE123C]">ECG Leads-Off Fault</span>
+                  <p class="text-[11px] text-[#59554E]">Triggers LO+ / LO- electrode detachment alert and flatline.</p>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" id="sim-leads-off-toggle" class="sr-only peer">
-                  <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500"></div>
+                  <div class="w-11 h-6 bg-[#DDD8CC] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#DDD8CC] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#BE123C]"></div>
                 </label>
               </div>
 
-              <div class="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
+              <div class="flex items-center justify-between p-4 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF] text-xs">
                 <div>
-                  <span class="font-bold text-amber-600">PPG Finger Probe Detached</span>
-                  <p class="text-[11px] text-slate-500">Simulates finger removal from optical photoplethysmogram sensor.</p>
+                  <span class="font-bold text-[#B45309]">PPG Finger Probe Detached</span>
+                  <p class="text-[11px] text-[#59554E]">Simulates finger removal from optical photoplethysmogram sensor.</p>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" id="sim-finger-off-toggle" class="sr-only peer">
-                  <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                  <div class="w-11 h-6 bg-[#DDD8CC] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#DDD8CC] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#B45309]"></div>
                 </label>
               </div>
             </div>

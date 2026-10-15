@@ -118,10 +118,11 @@
     const navItems = document.querySelectorAll(".nav-item");
     const viewPanels = document.querySelectorAll(".view-panel");
     const viewTitleEl = document.getElementById("view-title");
+    const btnBack = document.getElementById("btn-back-overview");
 
     const titles = {
-      "view-overview": { icon: "layout-dashboard", text: "Clinical Telemetry Cockpit" },
-      "view-face": { icon: "scan-face", text: "Face Access & Liveness Verification" },
+      "view-overview": { icon: "layout-dashboard", text: "Cockpit Telemetry" },
+      "view-face": { icon: "scan-face", text: "Biometric Access & Liveness" },
       "view-ecg": { icon: "heart-pulse", text: "Live ECG Waveform Monitor (Lead II)" },
       "view-ppg": { icon: "waves", text: "Photoplethysmogram (PPG) & SpO2 Monitor" },
       "view-analytics": { icon: "line-chart", text: "Biomedical Analytics & Blood Pressure Model" },
@@ -137,10 +138,8 @@
       navItems.forEach((btn) => {
         if (btn.dataset.view === targetViewId) {
           btn.classList.add("active");
-          btn.classList.remove("text-slate-400");
         } else {
           btn.classList.remove("active");
-          btn.classList.add("text-slate-400");
         }
       });
 
@@ -156,8 +155,17 @@
       // Update Header Title
       const meta = titles[targetViewId] || titles["view-overview"];
       if (viewTitleEl) {
-        viewTitleEl.innerHTML = `<i data-lucide="${meta.icon}" class="w-4 h-4 text-appleBlue"></i><span>${meta.text}</span>`;
+        viewTitleEl.innerHTML = `<i data-lucide="${meta.icon}" class="w-4 h-4 text-[#18181B]"></i><span>${meta.text}</span>`;
         initLucideIcons();
+      }
+
+      // Update Back Button appearance
+      if (btnBack) {
+        if (targetViewId === "view-overview") {
+          btnBack.classList.remove("bg-[#EFECE3]");
+        } else {
+          btnBack.classList.add("bg-white");
+        }
       }
 
       // Trigger Oscilloscope Resize on Display Change
@@ -181,6 +189,16 @@
         switchView(el.dataset.jump);
       });
     });
+
+    // Explicit Back Button to Cockpit Overview
+    if (btnBack) {
+      btnBack.addEventListener("click", () => {
+        switchView("view-overview");
+      });
+    }
+
+    // Expose switchView globally for verification and scripting
+    window.switchView = switchView;
   }
 
   // =========================================================================
@@ -260,6 +278,13 @@
       });
     }
 
+    const btnClose = document.getElementById("btn-faceid-close");
+    if (btnClose) {
+      btnClose.addEventListener("click", () => {
+        unlockDashboardAsGuest();
+      });
+    }
+
     if (btnLock) {
       btnLock.addEventListener("click", () => {
         performLogout();
@@ -331,17 +356,17 @@
       const isLive = det.liveness ? det.liveness.is_live : true;
       const sim = Math.round((det.similarity || 0) * 100);
 
-      let strokeColor = "#f59e0b"; // Apple Amber for UNKNOWN
-      let fillColor = "rgba(245, 158, 11, 0.12)";
+      let strokeColor = "#b45309"; // Warm Amber for UNKNOWN
+      let fillColor = "rgba(180, 83, 9, 0.12)";
       let label = `UNKNOWN (${sim}%)`;
 
       if (!isLive) {
-        strokeColor = "#f43f5e"; // Apple Coral for spoof
-        fillColor = "rgba(244, 63, 94, 0.12)";
+        strokeColor = "#be123c"; // Warm Rose for spoof
+        fillColor = "rgba(190, 18, 60, 0.12)";
         label = "SPOOF SUSPECTED";
       } else if (isKnown) {
-        strokeColor = "#10b981"; // Apple Emerald for Ashutosh/Dhrunil
-        fillColor = "rgba(16, 185, 129, 0.12)";
+        strokeColor = "#15803d"; // Warm Forest Green for Ashutosh/Dhrunil
+        fillColor = "rgba(21, 128, 61, 0.12)";
         label = `${name} (${sim}%)`;
       }
 
@@ -447,7 +472,7 @@
           // Live Unknown Subject detected: render amber reticle and inform user
           if (reticle) {
             reticle.className = "faceid-reticle-ring scanning";
-            reticle.style.borderColor = "#f59e0b";
+            reticle.style.borderColor = "#b45309";
           }
           const sim = detections[0] ? Math.round((detections[0].similarity || 0) * 100) : 0;
           if (statusText) statusText.textContent = `Unregistered Subject (UNKNOWN: ${sim}%)`;
@@ -579,11 +604,17 @@
     if (hdrAvatar) {
       hdrAvatar.textContent = person.avatar;
       hdrAvatar.className = person.avatar === "AS"
-        ? "w-7 h-7 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center font-bold text-blue-300 text-xs"
-        : "w-7 h-7 rounded-full bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center font-bold text-emerald-300 text-xs";
+        ? "w-7 h-7 rounded-full bg-[#18181B] text-white flex items-center justify-center font-bold text-xs shadow-xs"
+        : "w-7 h-7 rounded-full bg-[#15803D] text-white flex items-center justify-center font-bold text-xs shadow-xs";
     }
     if (hdrName) hdrName.textContent = person.name;
     if (hdrRole) hdrRole.textContent = person.role;
+
+    // Synchronize Airbnb Telemetry Capsule
+    const capsuleName = document.getElementById("hdr-capsule-name");
+    const capsuleSession = document.getElementById("hdr-capsule-session");
+    if (capsuleName) capsuleName.textContent = person.name;
+    if (capsuleSession) capsuleSession.textContent = "Verified Sync";
 
     // Update Sidebar Active Subject
     const subjAvatar = document.getElementById("subject-avatar");
@@ -593,13 +624,13 @@
     if (subjAvatar) {
       subjAvatar.textContent = person.avatar;
       subjAvatar.className = person.avatar === "AS"
-        ? "w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center font-bold text-blue-300 text-xs"
-        : "w-8 h-8 rounded-full bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center font-bold text-emerald-300 text-xs";
+        ? "w-8 h-8 rounded-full bg-[#18181B] text-white flex items-center justify-center font-bold text-xs"
+        : "w-8 h-8 rounded-full bg-[#15803D] text-white flex items-center justify-center font-bold text-xs";
     }
     if (subjName) subjName.textContent = person.name;
     if (sessBadge) {
       sessBadge.textContent = "VERIFIED";
-      sessBadge.className = "px-2 py-0.5 rounded-full text-[9px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-800/40";
+      sessBadge.className = "px-2 py-0.5 rounded-full text-[9px] font-mono bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0] font-semibold";
     }
 
     // Update Identity Card in View 2
@@ -629,14 +660,14 @@
       restrictedAlert.style.animation = "none";
       restrictedAlert.offsetHeight; // reflow
       restrictedAlert.style.animation = "";
-      const alertMsg = restrictedAlert.querySelector(".text-rose-800");
+      const alertMsg = restrictedAlert.querySelector(".text-amber-800");
       if (alertMsg) {
         alertMsg.textContent = "Unregistered subject (UNKNOWN). Vital calculations are calibrated for Ashutosh & Dhrunil. You can continue as Guest or authenticate.";
       }
     }
     if (reticle) {
       reticle.className = "faceid-reticle-ring scanning";
-      reticle.style.borderColor = "#f59e0b";
+      reticle.style.borderColor = "#b45309";
     }
     if (statusText) statusText.textContent = "Unregistered Subject Detected (UNKNOWN)";
 
@@ -679,10 +710,16 @@
 
     if (hdrAvatar) {
       hdrAvatar.textContent = "GU";
-      hdrAvatar.className = "w-7 h-7 rounded-full bg-slate-600/20 border border-slate-500/30 flex items-center justify-center font-bold text-slate-700 text-xs";
+      hdrAvatar.className = "w-7 h-7 rounded-full bg-[#FAF9F5] border border-[#ECE8DF] flex items-center justify-center font-bold text-[#78736B] text-xs";
     }
     if (hdrName) hdrName.textContent = "Guest Subject";
     if (hdrRole) hdrRole.textContent = "Guest Mode (Calibrated for Ashutosh & Dhrunil)";
+
+    // Synchronize Airbnb Telemetry Capsule
+    const capsuleName = document.getElementById("hdr-capsule-name");
+    const capsuleSession = document.getElementById("hdr-capsule-session");
+    if (capsuleName) capsuleName.textContent = "Guest Subject";
+    if (capsuleSession) capsuleSession.textContent = "Guest Mode";
 
     // Update Sidebar Active Subject
     const subjAvatar = document.getElementById("subject-avatar");
@@ -691,12 +728,12 @@
 
     if (subjAvatar) {
       subjAvatar.textContent = "GU";
-      subjAvatar.className = "w-8 h-8 rounded-full bg-slate-600/20 border border-slate-500/30 flex items-center justify-center font-bold text-slate-700 text-xs";
+      subjAvatar.className = "w-8 h-8 rounded-full bg-[#FAF9F5] border border-[#ECE8DF] flex items-center justify-center font-bold text-[#78736B] text-xs";
     }
     if (subjName) subjName.textContent = "Guest Subject";
     if (sessBadge) {
       sessBadge.textContent = "GUEST";
-      sessBadge.className = "px-2 py-0.5 rounded-full text-[9px] font-mono bg-amber-950/60 text-amber-400 border border-amber-800/40";
+      sessBadge.className = "px-2 py-0.5 rounded-full text-[9px] font-mono bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A] font-medium";
     }
 
     updateIdentityPanel({
@@ -733,6 +770,12 @@
       faceIdState.animTimer = null;
     }
 
+    // Synchronize Airbnb Telemetry Capsule
+    const capsuleName = document.getElementById("hdr-capsule-name");
+    const capsuleSession = document.getElementById("hdr-capsule-session");
+    if (capsuleName) capsuleName.textContent = "Locked";
+    if (capsuleSession) capsuleSession.textContent = "Standby";
+
     const modal = document.getElementById("faceid-modal");
     const progressContainer = document.getElementById("faceid-progress-container");
     const restrictedAlert = document.getElementById("faceid-restricted-alert");
@@ -764,8 +807,8 @@
           {
             id: "ecg",
             name: "LEAD II",
-            color: "#10b981",
-            glowColor: "rgba(16, 185, 129, 0.15)",
+            color: "#15803d",
+            glowColor: "transparent",
             gain: 1.0,
             minVal: -1.5,
             maxVal: 2.5,
@@ -786,8 +829,8 @@
           {
             id: "ppg_ir",
             name: "IR (880nm)",
-            color: "#3b82f6",
-            glowColor: "rgba(59, 130, 246, 0.15)",
+            color: "#1d4ed8",
+            glowColor: "transparent",
             gain: 1.0,
             offsetY: 0.15,
             minVal: -1.2,
@@ -796,8 +839,8 @@
           {
             id: "ppg_red",
             name: "RED (660nm)",
-            color: "#f43f5e",
-            glowColor: "rgba(244, 63, 94, 0.15)",
+            color: "#be123c",
+            glowColor: "transparent",
             gain: 0.8,
             offsetY: -0.25,
             minVal: -1.2,
@@ -819,8 +862,8 @@
           {
             id: "ecg",
             name: "LEAD II",
-            color: "#10b981",
-            glowColor: "rgba(16, 185, 129, 0.15)",
+            color: "#15803d",
+            glowColor: "transparent",
             gain: 1.0,
             minVal: -1.5,
             maxVal: 2.5,
@@ -841,8 +884,8 @@
           {
             id: "ppg_ir",
             name: "IR 880nm (Arterial)",
-            color: "#3b82f6",
-            glowColor: "rgba(59, 130, 246, 0.15)",
+            color: "#1d4ed8",
+            glowColor: "transparent",
             gain: 1.0,
             offsetY: 0.15,
             minVal: -1.2,
@@ -851,8 +894,8 @@
           {
             id: "ppg_red",
             name: "Red 660nm (Venous)",
-            color: "#f43f5e",
-            glowColor: "rgba(244, 63, 94, 0.15)",
+            color: "#be123c",
+            glowColor: "transparent",
             gain: 0.9,
             offsetY: -0.25,
             minVal: -1.2,
@@ -1106,7 +1149,7 @@
       if (elMiniRr) elMiniRr.textContent = "-- ms";
       if (hrQualityTag) {
         hrQualityTag.textContent = "RESTRICTED";
-        hrQualityTag.className = "text-rose-400 font-semibold";
+        hrQualityTag.className = "text-[#B45309] font-semibold";
       }
       if (elEcgHr) elEcgHr.textContent = "-- BPM";
       if (elEcgRr) elEcgRr.textContent = "-- ms";
@@ -1125,7 +1168,7 @@
 
     if (hrQualityTag) {
       hrQualityTag.textContent = "VALID";
-      hrQualityTag.className = "text-emerald-400 font-semibold";
+      hrQualityTag.className = "text-[#15803D] font-semibold";
     }
 
     if (elHr) elHr.textContent = v.ecgHr;
@@ -1164,16 +1207,16 @@
     if (isLeadsOff) {
       if (banner) banner.classList.remove("hidden");
       if (leadPill) {
-        leadPill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-red-400"></span> DETACHED';
-        leadPill.className = "text-red-400 font-semibold flex items-center gap-1";
+        leadPill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-[#BE123C]"></span> DETACHED';
+        leadPill.className = "text-[#BE123C] font-semibold flex items-center gap-1";
       }
       if (miniEcgScope) miniEcgScope.setLeadsOff(true, "LEADS OFF - REATTACH ELECTRODES");
       if (fullEcgScope) fullEcgScope.setLeadsOff(true, "LEADS OFF - REATTACH ELECTRODES");
     } else {
       if (banner) banner.classList.add("hidden");
       if (leadPill) {
-        leadPill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> NORMAL';
-        leadPill.className = "text-emerald-400 font-semibold flex items-center gap-1";
+        leadPill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-[#15803D]"></span> NORMAL';
+        leadPill.className = "text-[#15803D] font-semibold flex items-center gap-1";
       }
       if (miniEcgScope) miniEcgScope.setLeadsOff(false);
       if (fullEcgScope) fullEcgScope.setLeadsOff(false);
@@ -1333,8 +1376,8 @@
         }
         if (audioBtn) {
           audioBtn.className = state.audioBeepEnabled
-            ? "flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-950/60 border border-blue-800/60 text-xs text-blue-300 transition-colors"
-            : "flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-white transition-colors";
+            ? "warm-pill bg-[#18181B] text-white border-[#18181B] cursor-pointer"
+            : "warm-pill cursor-pointer";
         }
       });
     }
@@ -1567,10 +1610,10 @@
       const isLive = det.liveness ? det.liveness.is_live : true;
       const score = Math.round((det.similarity || 0) * 100);
 
-      // Apple clean colors: Forest emerald for known live, Amber for unknown, Coral for spoof
-      let strokeColor = "#10b981"; // Apple emerald
-      if (!isLive) strokeColor = "#f43f5e"; // Apple coral (spoof)
-      else if (!isKnown) strokeColor = "#f59e0b"; // Apple amber (unknown)
+      // Editorial clean colors: Forest emerald for known live, Warm Amber for unknown, Berry for spoof
+      let strokeColor = "#15803d"; // Forest emerald
+      if (!isLive) strokeColor = "#be123c"; // Warm berry (spoof)
+      else if (!isKnown) strokeColor = "#b45309"; // Warm amber (unknown)
 
       // Clean rounded bounding box - NO NEON GLOW
       ctx.strokeStyle = strokeColor;
@@ -1606,7 +1649,7 @@
       const tagX = Math.max(8, Math.min(w - tagW - 8, x1));
       const tagY = Math.max(26, y1);
 
-      ctx.fillStyle = "rgba(17, 24, 39, 0.88)";
+      ctx.fillStyle = "rgba(24, 24, 27, 0.88)";
       if (ctx.roundRect) {
         ctx.beginPath();
         ctx.roundRect(tagX, tagY - 24, tagW, tagH, 6);
@@ -1622,10 +1665,10 @@
       if (accessBadge) {
         if (isKnown) {
           accessBadge.textContent = "VERIFIED ENROLLED";
-          accessBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold";
+          accessBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0] font-semibold";
         } else {
           accessBadge.textContent = "UNREGISTERED";
-          accessBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-amber-50 text-amber-700 border border-amber-200 font-semibold";
+          accessBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A] font-semibold";
         }
       }
 
@@ -1653,8 +1696,8 @@
     const x1 = (w - boxW) / 2 + dx;
     const y1 = (h - boxH) / 2 + dy - 20;
 
-    // Apple Clean Target Reticle (No harsh neon glow)
-    ctx.strokeStyle = "#10b981";
+    // Clean Target Reticle (Zero neon glow)
+    ctx.strokeStyle = "#15803d";
     ctx.lineWidth = 2;
     ctx.shadowBlur = 0;
 
@@ -1679,7 +1722,7 @@
     const mouthL = { x: x1 + boxW * 0.38, y: y1 + boxH * 0.75 };
     const mouthR = { x: x1 + boxW * 0.62, y: y1 + boxH * 0.75 };
 
-    ctx.fillStyle = "#3b82f6";
+    ctx.fillStyle = "#1d4ed8";
     [leftEye, rightEye, nose, mouthL, mouthR].forEach((pt) => {
       ctx.beginPath();
       ctx.arc(pt.x, pt.y, 2.5, 0, Math.PI * 2);
@@ -1690,9 +1733,9 @@
     const tag = "ID:016 Ashutosh (98.4%) [VERIFIED]";
     ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif';
     const tagW = ctx.measureText(tag).width + 16;
-    ctx.fillStyle = "rgba(17, 24, 39, 0.9)";
+    ctx.fillStyle = "rgba(24, 24, 27, 0.9)";
     ctx.fillRect(x1, y1 - 24, tagW, 20);
-    ctx.fillStyle = "#10b981";
+    ctx.fillStyle = "#15803d";
     ctx.fillText(tag, x1 + 8, y1 - 9);
 
     // Update Identity HUD
@@ -1710,6 +1753,7 @@
     const elSim = document.getElementById("id-similarity");
     const elTrk = document.getElementById("id-track-num");
     const elAvatar = document.getElementById("id-photo-placeholder");
+    const accessBadge = document.getElementById("subject-access-badge");
 
     if (elName) elName.textContent = info.name;
     if (elSim) elSim.textContent = `${info.similarity}%`;
@@ -1717,6 +1761,22 @@
     if (elAvatar && info.name) {
       const initials = info.name.split(" ").map((w) => w[0]).join("").slice(0, 2);
       elAvatar.textContent = initials;
+      if (info.name === "Ashutosh") {
+        elAvatar.className = "w-14 h-14 rounded-2xl bg-[#18181B] text-white flex items-center justify-center font-mono text-base font-bold shadow-xs";
+      } else if (info.name === "Dhrunil") {
+        elAvatar.className = "w-14 h-14 rounded-2xl bg-[#15803D] text-white flex items-center justify-center font-mono text-base font-bold shadow-xs";
+      } else {
+        elAvatar.className = "w-14 h-14 rounded-2xl bg-[#FAF9F5] border border-[#ECE8DF] text-[#78736B] flex items-center justify-center font-mono text-base font-bold shadow-xs";
+      }
+    }
+    if (accessBadge) {
+      if (info.name === "Ashutosh" || info.name === "Dhrunil") {
+        accessBadge.textContent = "VERIFIED ENROLLED";
+        accessBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0] font-semibold";
+      } else {
+        accessBadge.textContent = "UNREGISTERED GUEST";
+        accessBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A] font-semibold";
+      }
     }
   }
 
@@ -1837,16 +1897,20 @@
 
     if (badge) {
       badge.textContent = isGuest ? "GUEST ACTIVE" : "SUBJECT BOUND";
-      badge.className = "px-2 py-0.5 rounded-full text-[9px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-800/40";
+      badge.className = "px-2 py-0.5 rounded-full text-[9px] font-mono bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0] font-semibold";
     }
     if (subjName) subjName.textContent = name;
     if (avatar) {
       avatar.textContent = name.split(" ").map((w) => w[0]).join("").slice(0, 2);
-      avatar.className = "w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center font-bold text-blue-300 text-xs";
+      avatar.className = name === "Ashutosh"
+        ? "w-8 h-8 rounded-full bg-[#18181B] text-white flex items-center justify-center font-bold text-xs"
+        : (name === "Dhrunil"
+          ? "w-8 h-8 rounded-full bg-[#15803D] text-white flex items-center justify-center font-bold text-xs"
+          : "w-8 h-8 rounded-full bg-[#FAF9F5] border border-[#ECE8DF] flex items-center justify-center font-bold text-[#78736B] text-xs");
     }
     if (btnToggle) {
       btnToggle.textContent = "End Session";
-      btnToggle.className = "flex-1 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-[11px] font-medium transition-colors";
+      btnToggle.className = "flex-1 py-1.5 rounded-full bg-[#FFF1F2] hover:bg-[#FFE4E6] text-[#BE123C] border border-[#FECDD3] text-[11px] font-semibold transition-colors";
     }
   }
 
@@ -1910,16 +1974,16 @@
 
     if (badge) {
       badge.textContent = "UNASSIGNED";
-      badge.className = "px-1.5 py-0.5 rounded text-[9px] font-mono bg-slate-800 text-slate-300";
+      badge.className = "px-2 py-0.5 rounded-full text-[9px] font-mono bg-[#FAF9F5] text-[#78736B] border border-[#ECE8DF] font-medium";
     }
     if (subjName) subjName.textContent = "Guest Session";
     if (avatar) {
       avatar.textContent = "?";
-      avatar.className = "w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-xs";
+      avatar.className = "w-8 h-8 rounded-full bg-[#FAF9F5] border border-[#ECE8DF] flex items-center justify-center font-bold text-[#78736B] text-xs";
     }
     if (btnToggle) {
       btnToggle.textContent = "Start Session";
-      btnToggle.className = "flex-1 py-1.5 rounded bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 border border-emerald-500/40 text-[11px] font-medium transition-colors";
+      btnToggle.className = "flex-1 py-1.5 rounded-full bg-[#18181B] hover:bg-[#000000] text-white text-[11px] font-semibold transition-all shadow-xs";
     }
     if (timer) timer.textContent = "00:00:00";
   }
@@ -2060,29 +2124,29 @@
 
     filtered.forEach((s) => {
       const tr = document.createElement("tr");
-      tr.className = "hover:bg-slate-900/40 transition-colors";
+      tr.className = "hover:bg-[#FAF9F5] transition-colors border-b border-[#ECE8DF]";
       tr.innerHTML = `
-        <td class="p-3.5 font-medium text-blue-400">${s.id}</td>
-        <td class="p-3.5 font-medium text-slate-100">${s.name}</td>
+        <td class="p-3.5 font-medium font-mono text-[#18181B]">${s.id}</td>
+        <td class="p-3.5 font-semibold text-[#18181B]">${s.name}</td>
         <td class="p-3.5">
           <span class="px-2 py-0.5 rounded-full text-[10px] font-mono ${
-            s.isGuest ? "bg-slate-800 text-slate-300" : "bg-purple-950/60 text-purple-300 border border-purple-800/50"
+            s.isGuest ? "bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A]" : "bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0] font-semibold"
           }">${s.isGuest ? "GUEST" : "ENROLLED"}</span>
         </td>
-        <td class="p-3.5 text-slate-400">${s.startTime}</td>
-        <td class="p-3.5 font-mono text-slate-300">${s.duration}</td>
-        <td class="p-3.5 font-mono text-emerald-400 font-medium">${s.avgHr} BPM</td>
-        <td class="p-3.5 font-mono text-blue-400 font-medium">${s.avgSpo2}%</td>
+        <td class="p-3.5 text-[#78736B] font-mono">${s.startTime}</td>
+        <td class="p-3.5 font-mono text-[#78736B]">${s.duration}</td>
+        <td class="p-3.5 font-mono text-[#15803D] font-semibold">${s.avgHr} BPM</td>
+        <td class="p-3.5 font-mono text-[#1D4ED8] font-semibold">${s.avgSpo2}%</td>
         <td class="p-3.5">
-          <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-800/40">
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0] font-semibold">
             ${s.status}
           </span>
         </td>
-        <td class="p-3.5 text-right space-x-2">
-          <button class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-300 text-xs transition-colors" onclick="window.loadSessionReport('${s.id}')">
+        <td class="p-3.5 text-right space-x-1.5">
+          <button class="airbnb-btn airbnb-btn-secondary py-1 px-3 text-[11px]" onclick="window.loadSessionReport('${s.id}')">
             Report
           </button>
-          <button class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 text-xs transition-colors" onclick="window.exportSessionCSV('${s.id}')">
+          <button class="airbnb-btn airbnb-btn-secondary py-1 px-3 text-[11px]" onclick="window.exportSessionCSV('${s.id}')">
             CSV
           </button>
         </td>
@@ -2201,11 +2265,11 @@
     const w = canvas.width;
     const h = canvas.height;
 
-    ctx.fillStyle = "#06090f";
+    ctx.fillStyle = "#0b0f17";
     ctx.fillRect(0, 0, w, h);
 
     // Diagonal identity line (RR_n = RR_n+1)
-    ctx.strokeStyle = "rgba(56, 189, 248, 0.2)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
@@ -2230,7 +2294,7 @@
       const py = h - 20 - ((yVal - minRR) / range) * (h - 40);
 
       const alpha = (i / rrs.length) * 0.8 + 0.2;
-      ctx.fillStyle = `rgba(0, 240, 255, ${alpha})`;
+      ctx.fillStyle = `rgba(21, 128, 61, ${alpha})`;
       ctx.beginPath();
       ctx.arc(px, py, 3, 0, Math.PI * 2);
       ctx.fill();
@@ -2292,15 +2356,15 @@
         const probePill = document.getElementById("ppg-status-pill");
         if (e.target.checked) {
           if (probePill) {
-            probePill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> DETACHED';
-            probePill.className = "text-amber-400 font-semibold flex items-center gap-1";
+            probePill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-[#B45309]"></span> DETACHED';
+            probePill.className = "text-[#B45309] font-semibold flex items-center gap-1";
           }
           if (miniPpgScope) miniPpgScope.setLeadsOff(true, "FINGER OFF - CHECK SENSOR CLIP");
           if (fullPpgScope) fullPpgScope.setLeadsOff(true, "FINGER OFF - CHECK SENSOR CLIP");
         } else {
           if (probePill) {
-            probePill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> ATTACHED';
-            probePill.className = "text-blue-400 font-medium flex items-center gap-1";
+            probePill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-[#1D4ED8]"></span> ATTACHED';
+            probePill.className = "text-[#1D4ED8] font-semibold flex items-center gap-1";
           }
           if (miniPpgScope) miniPpgScope.setLeadsOff(false);
           if (fullPpgScope) fullPpgScope.setLeadsOff(false);
@@ -2406,8 +2470,8 @@
         if (freezeLabel) freezeLabel.textContent = state.isFrozen ? "Resume" : "Freeze";
         if (freezeBtn) {
           freezeBtn.className = state.isFrozen
-            ? "flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-amber-950 border border-amber-700 text-xs text-amber-300 transition-colors"
-            : "flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-amber-300 transition-colors";
+            ? "warm-pill bg-[#B45309] text-white border-[#B45309] cursor-pointer"
+            : "warm-pill cursor-pointer";
         }
       });
     }
@@ -2418,13 +2482,13 @@
     if (btnSweep && btnScroll) {
       btnSweep.addEventListener("click", () => {
         if (fullEcgScope) fullEcgScope.setMode("sweep");
-        btnSweep.className = "px-2.5 py-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold";
-        btnScroll.className = "px-2.5 py-1 rounded bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200";
+        btnSweep.className = "warm-btn warm-btn-primary py-1 px-3 text-xs";
+        btnScroll.className = "warm-btn warm-btn-secondary py-1 px-3 text-xs";
       });
       btnScroll.addEventListener("click", () => {
         if (fullEcgScope) fullEcgScope.setMode("scroll");
-        btnScroll.className = "px-2.5 py-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold";
-        btnSweep.className = "px-2.5 py-1 rounded bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200";
+        btnScroll.className = "warm-btn warm-btn-primary py-1 px-3 text-xs";
+        btnSweep.className = "warm-btn warm-btn-secondary py-1 px-3 text-xs";
       });
     }
 
