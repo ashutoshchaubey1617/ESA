@@ -1,20 +1,3 @@
-/*
- * Multimodal Health Monitor Firmware for Arduino Uno R3
- * Sensors:
- *   - MAX30102 (PPG / SpO2 / Pulse Oximeter) over I2C (SDA=A4, SCL=A5)
- *   - AD8232 (Single-lead Heart Rate Monitor) over Analog A0, Leads-off on D10/D11
- *
- * Voltage Precautions:
- *   - AD8232 must be powered from the Arduino 3.3V rail (Max operating voltage: 3.6V).
- *   - MAX30102 must be powered from 3.3V (Sensor LEDs operate at 3.3V, IC core at 1.8V).
- *   - Connecting either sensor to 5.0V may permanently damage the sensor ICs.
- *
- * Serial Protocol:
- *   Baud rate: 115200
- *   Data Packet: SAMPLE,<time_ms>,<seq>,<ecg_val>,<ppg_red>,<ppg_ir>,<leads_off>\n
- *   Status Packet: STATUS,<code>,<message>\n
- */
-
 #include <Wire.h>
 
 // Pin definitions
@@ -65,47 +48,64 @@ uint8_t i2c_read(uint8_t reg) {
   return 0;
 }
 
-// Initialize MAX30102
+// Initialize MAX30102 / MAX30100
+bool is_max30100 = false;
+
 bool init_max30102() {
   Wire.begin();
-  Wire.setClock(400000); // 400kHz Fast I2C mode
+  Wire.setClock(100000); // 100kHz Standard I2C mode (reliable on jumper wires)
 
-  // Test I2C communication by reading Part ID (0x15 for MAX30102)
-  uint8_t part_id = i2c_read(REG_PART_ID);
-  if (part_id != 0x15) {
-    // If not matching default ID, probe device address presence
-    Wire.beginTransmission(MAX30102_I2C_ADDR);
-    if (Wire.endTransmission() != 0) {
-      return false;
-    }
+  // Step 1: Probe I2C address 0x57
+  Wire.beginTransmission(MAX30102_I2C_ADDR);
+  byte error = Wire.endTransmission();
+  if (error != 0) {
+    // Device not responding on 0x57
+    return false;
   }
+
+  // Step 2: Read Part ID (0x15 for MAX30102, 0x11 for MAX30100)
+  uint8_t part_id = i2c_read(REG_PART_ID);
+
+  if (part_id == 0x11) {
+    // Module is MAX30100
+    is_max30100 = true;
+    i2c_write(0x06, 0x40); // Reset
+    delay(50);
+    i2c_write(0x06, 0x03); // SpO2 Mode
+    i2c_write(0x07, 0x07); // 100 Hz, 1600us pulse
+    i2c_write(0x09, 0xFF); // Full LED current (Red + IR)
+    return true;
+  }
+
+  // Module is MAX30102 / MAX30105
+  is_max30100 = false;
 
   // Reset MAX30102
   i2c_write(REG_MODE_CONFIG, 0x40);
-  delay(10);
+  delay(50);
 
   // Clear FIFO pointers
   i2c_write(REG_FIFO_WR_PTR, 0x00);
   i2c_write(REG_OVF_COUNTER, 0x00);
   i2c_write(REG_FIFO_RD_PTR, 0x00);
 
-  // FIFO Config: sample avg = 4, fifo rollover = enabled, fifo almost full = 17
+  // FIFO Config: sample avg = 4, fifo rollover = enabled
   i2c_write(REG_FIFO_CONFIG, 0x4F);
 
   // Mode Config: SpO2 mode (Red & IR enabled)
   i2c_write(REG_MODE_CONFIG, 0x03);
 
-  // SpO2 Config: ADC range = 4096nA, Sample Rate = 100 Hz, LED pulse width = 411us (18-bit resolution)
+  // SpO2 Config: ADC range = 4096nA, Sample Rate = 100 Hz, LED pulse width = 411us
   i2c_write(REG_SPO2_CONFIG, 0x27);
 
-  // LED Pulse Amplitude (current): Red = 0x24 (~7.2mA), IR = 0x24 (~7.2mA)
-  i2c_write(REG_LED1_PA, 0x24);
-  i2c_write(REG_LED2_PA, 0x24);
+  // LED Pulse Amplitude: 0x3F (~12.5mA) for clearly visible bright red glow
+  i2c_write(REG_LED1_PA, 0x3F);
+  i2c_write(REG_LED2_PA, 0x3F);
 
   return true;
 }
 
-// Read raw Red and IR samples from MAX30102 FIFO
+// Read raw Red and IR samples from FIFO
 bool read_max30102(uint32_t &red, uint32_t &ir) {
   if (!max30102_present) {
     red = 0;
@@ -113,7 +113,26 @@ bool read_max30102(uint32_t &red, uint32_t &ir) {
     return false;
   }
 
-  // Request 6 bytes (3 bytes Red, 3 bytes IR) from FIFO
+  if (is_max30100) {
+    // MAX30100: 4 bytes from register 0x05 (2 bytes Red, 2 bytes IR)
+    Wire.beginTransmission(MAX30102_I2C_ADDR);
+    Wire.write(0x05);
+    if (Wire.endTransmission(false) != 0) return false;
+
+    Wire.requestFrom(MAX30102_I2C_ADDR, (uint8_t)4);
+    if (Wire.available() >= 4) {
+      uint8_t r_h = Wire.read();
+      uint8_t r_l = Wire.read();
+      uint8_t ir_h = Wire.read();
+      uint8_t ir_l = Wire.read();
+      red = ((uint32_t)r_h << 8) | (uint32_t)r_l;
+      ir  = ((uint32_t)ir_h << 8) | (uint32_t)ir_l;
+      return true;
+    }
+    return false;
+  }
+
+  // MAX30102: 6 bytes from register 0x07 (3 bytes Red, 3 bytes IR)
   Wire.beginTransmission(MAX30102_I2C_ADDR);
   Wire.write(REG_FIFO_DATA);
   if (Wire.endTransmission(false) != 0) {
@@ -140,21 +159,29 @@ bool read_max30102(uint32_t &red, uint32_t &ir) {
 void setup() {
   // Initialize Serial
   Serial.begin(115200);
-  while (!Serial && millis() < 2000); // Wait for USB connection on Leonardo/Micro, continue on Uno
+  while (!Serial && millis() < 2000);
 
   // Configure AD8232 Pins
   pinMode(PIN_ECG_ANALOG, INPUT);
   pinMode(PIN_ECG_LO_PLUS, INPUT);
   pinMode(PIN_ECG_LO_MINUS, INPUT);
 
+  // Enable Arduino internal pullups on I2C pins A4/A5 (fixes 1.8V bus hang on Chinese MAX modules)
+  pinMode(A4, INPUT_PULLUP);
+  pinMode(A5, INPUT_PULLUP);
+
   // Initialize Sensors
   max30102_present = init_max30102();
 
-  Serial.println(F("STATUS,READY,Multimodal Health Monitor v1.0"));
+  Serial.println(F("STATUS,READY,Multimodal Health Monitor v1.1"));
   if (max30102_present) {
-    Serial.println(F("STATUS,MAX30102,OK"));
+    if (is_max30100) {
+      Serial.println(F("STATUS,SENSOR,MAX30100_ONLINE_LED_ON"));
+    } else {
+      Serial.println(F("STATUS,SENSOR,MAX30102_ONLINE_LED_ON"));
+    }
   } else {
-    Serial.println(F("STATUS,MAX30102,NOT_DETECTED"));
+    Serial.println(F("STATUS,SENSOR,MAX_NOT_FOUND_CHECK_A4_A5_VCC"));
   }
   Serial.println(F("STATUS,AD8232,ANALOG_A0_READY"));
 
