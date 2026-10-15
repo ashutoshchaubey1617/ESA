@@ -405,7 +405,12 @@ class FaceService:
             return {"annotated_frame": frame, "detections": [], "status": self.status_message}
 
         h, w, _ = frame.shape
-        bboxes, landmarks = self.detector.detect(image=frame)
+        # Multi-scale detection: try 320x320 first, then fallback to 640x640 or 128x128
+        bboxes, landmarks = self.detector.detect(image=frame, thresh=0.35, input_size=(320, 320))
+        if len(bboxes) == 0:
+            bboxes, landmarks = self.detector.detect(image=frame, thresh=0.35, input_size=(640, 640))
+        if len(bboxes) == 0:
+            bboxes, landmarks = self.detector.detect(image=frame, thresh=0.35, input_size=(128, 128))
 
         # Global frame lighting check
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -485,6 +490,7 @@ class FaceService:
                 "liveness": liveness_info,
                 "head_pose": liveness_info.get("pose"),
                 "low_light": is_low_light,
+                "landmarks": landmark.tolist() if hasattr(landmark, "tolist") else landmark,
             }
             detections.append(det_info)
 

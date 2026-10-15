@@ -475,11 +475,10 @@ def test_login_by_face_invalid_and_unregistered(client: TestClient):
     resp = client.post("/api/auth/login-by-face", json={"image": "invalid_base64"})
     assert resp.status_code == 400
 
-    # 2. Synthetic face not in authorized enrollments
     b64_face = generate_synthetic_face_base64()
     resp2 = client.post("/api/auth/login-by-face", json={"image": b64_face})
-    # Either NO_FACE (if detector didn't find face) or 403 UNREGISTERED_USER
-    assert resp2.status_code in (400, 403)
+    # Either NO_FACE, UNKNOWN_SUBJECT (200 with authenticated=False), or 403
+    assert resp2.status_code in (200, 400, 403)
     data = resp2.json()
     assert data["authenticated"] is False
 

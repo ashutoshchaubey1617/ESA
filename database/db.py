@@ -182,7 +182,7 @@ class DatabaseManager:
                 names = data.get("images_name", [])
                 embs = data.get("images_emb", [])
                 for target_name in ["ashutosh", "dhrunil"]:
-                    mask = (names == target_name)
+                    mask = np.array([str(n).strip().lower() == target_name.lower() for n in names])
                     if np.any(mask):
                         mean_emb = np.mean(embs[mask], axis=0)
                         norm = np.linalg.norm(mean_emb)
@@ -194,14 +194,18 @@ class DatabaseManager:
 
         for name, role in [("Ashutosh", "Lead Biomedical Research Engineer"), ("Dhrunil", "Lead Systems & Telemetry Architect")]:
             existing = self.get_participant_by_name(name)
+            emb = embs_cache.get(name.lower())
+            if emb is None:
+                # Deterministic normalized unit vector fallback
+                rng = np.random.RandomState(hash(name) % (2**32))
+                emb = rng.randn(512).astype(np.float32)
+                emb /= np.linalg.norm(emb)
+
             if not existing or existing.get("embedding") is None:
-                emb = embs_cache.get(name.lower())
-                if emb is None:
-                    # Deterministic normalized unit vector fallback
-                    rng = np.random.RandomState(hash(name) % (2**32))
-                    emb = rng.randn(512).astype(np.float32)
-                    emb /= np.linalg.norm(emb)
                 self.add_participant(name, emb, notes=f"Enrolled Participant - {role}")
+                seeded.append(name)
+            elif emb is not None:
+                self.add_participant(name, emb, notes=existing.get("notes") or f"Enrolled Participant - {role}")
                 seeded.append(name)
         return seeded
 

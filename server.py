@@ -602,7 +602,22 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
 
                 elif cmd == "login":
                     name = msg.get("name", "")
-                    if name and name.strip().lower() in AUTHORIZED_PARTICIPANTS:
+                    if name and name.strip().lower() == "guest":
+                        state.current_user = {
+                            "participant_id": None,
+                            "name": "Guest Subject",
+                            "role": "Guest Reviewer",
+                            "avatar": "GU",
+                        }
+                        state.active_participant_id = None
+                        state.is_guest_session = True
+                        await websocket.send_json({
+                            "type": "auth_status",
+                            "authenticated": False,
+                            "is_guest": True,
+                            "user": state.current_user,
+                        })
+                    elif name and name.strip().lower() in AUTHORIZED_PARTICIPANTS:
                         canon = "Ashutosh" if name.strip().lower() == "ashutosh" else "Dhrunil"
                         p = state.db.get_participant_by_name(canon)
                         part_id = p["participant_id"] if p else (16 if canon == "Ashutosh" else 17)
@@ -613,6 +628,7 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
                             "avatar": "AS" if canon == "Ashutosh" else "DH",
                         }
                         state.active_participant_id = part_id
+                        state.is_guest_session = False
                         await websocket.send_json({
                             "type": "auth_status",
                             "authenticated": True,
@@ -725,15 +741,13 @@ async def login_by_face(req: FaceLoginRequest):
 
     detections = result.get("detections", [])
     if not detections:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "success": False,
-                "authenticated": False,
-                "reason": "NO_FACE",
-                "message": "No face detected in camera frame. Position your face directly towards the camera."
-            }
-        )
+        return {
+            "success": False,
+            "authenticated": False,
+            "reason": "NO_FACE",
+            "message": "No face detected in camera frame. Position your face directly towards the camera.",
+            "detections": []
+        }
 
     primary = detections[0]
 
@@ -744,28 +758,26 @@ async def login_by_face(req: FaceLoginRequest):
     liveness = primary.get("liveness", {})
     liveness_status = liveness.get("status", "ANALYZING")
     if liveness_status == "ATTACK_SUSPECTED":
-        return JSONResponse(
-            status_code=403,
-            content={
-                "success": False,
-                "authenticated": False,
-                "reason": "SPOOF_DETECTED",
-                "message": "Liveness check failed. Biometric photo attack suspected.",
-                "detection": sanitize_json(primary)
-            }
-        )
+        return {
+            "success": False,
+            "authenticated": False,
+            "reason": "SPOOF_DETECTED",
+            "message": "Liveness check failed. Biometric photo attack suspected.",
+            "detection": sanitize_json(primary),
+            "detections": sanitize_json(detections)
+        }
 
     if not is_authorized_name:
-        return JSONResponse(
-            status_code=403,
-            content={
-                "success": False,
-                "authenticated": False,
-                "reason": "UNREGISTERED_USER",
-                "message": "Unregistered participant. Access to physiological vitals is restricted to enrolled personnel (Ashutosh / Dhrunil).",
-                "detection": sanitize_json(primary)
-            }
-        )
+        return {
+            "success": False,
+            "authenticated": False,
+            "reason": "UNKNOWN_SUBJECT",
+            "name": name if name else "UNKNOWN",
+            "similarity": primary.get("similarity", 0.0),
+            "message": "Unregistered subject detected (UNKNOWN). Vital calculations are calibrated for enrolled personnel (Ashutosh & Dhrunil).",
+            "detection": sanitize_json(primary),
+            "detections": sanitize_json(detections)
+        }
 
     canon_name = "Ashutosh" if name.lower() == "ashutosh" else "Dhrunil"
     p = state.db.get_participant_by_name(canon_name)
@@ -785,20 +797,22 @@ async def login_by_face(req: FaceLoginRequest):
 
     state.current_user = user_profile
     state.active_participant_id = part_id
+    state.is_guest_session = False
 
     return {
         "success": True,
         "authenticated": True,
         "user": user_profile,
         "message": f"Welcome back, {canon_name}!",
-        "detection": sanitize_json(primary)
+        "detection": sanitize_json(primary),
+        "detections": sanitize_json(detections)
     }
 
 
 @app.post("/api/auth/login")
 def direct_login(req: DirectLoginRequest):
     """
-    Direct login endpoint for enrolled personnel (Ashutosh / Dhrunil).
+    Direct login endpoint for enrolled personnel (Ashutosh / Dhrunil) and Guest.
     Useful for UI personnel switcher, automated testing, and development.
     """
     target_name = None
@@ -808,6 +822,26 @@ def direct_login(req: DirectLoginRequest):
         p = state.db.get_participant_by_id(req.participant_id)
         if p:
             target_name = p["name"]
+
+    if target_name and target_name.lower() == "guest":
+        user_profile = {
+            "participant_id": None,
+            "name": "Guest Subject",
+            "role": "Guest Reviewer",
+            "avatar": "GU",
+            "notes": "Guest session. Waveforms visible. Vital calculations calibrated for Ashutosh & Dhrunil.",
+            "enrolled_at": ""
+        }
+        state.current_user = user_profile
+        state.active_participant_id = None
+        state.is_guest_session = True
+        return {
+            "success": True,
+            "authenticated": False,
+            "is_guest": True,
+            "user": user_profile,
+            "message": "Logged in as Guest"
+        }
 
     if not target_name or target_name.lower() not in AUTHORIZED_PARTICIPANTS:
         raise HTTPException(
@@ -832,6 +866,7 @@ def direct_login(req: DirectLoginRequest):
 
     state.current_user = user_profile
     state.active_participant_id = part_id
+    state.is_guest_session = False
 
     return {
         "success": True,

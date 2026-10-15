@@ -293,14 +293,120 @@
     }
   }
 
+  function renderFaceIdOverlay(canvas, detections) {
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const cw = canvas.width || 220;
+    const ch = canvas.height || 220;
+    ctx.clearRect(0, 0, cw, ch);
+
+    if (!detections || detections.length === 0) return;
+
+    // Scale calculation for object-fit: cover from 640x480 video into cw x ch
+    const srcW = 640;
+    const srcH = 480;
+    const scale = Math.max(cw / srcW, ch / srcH);
+    const renderW = srcW * scale;
+    const renderH = srcH * scale;
+    const offsetX = (renderW - cw) / 2;
+    const offsetY = (renderH - ch) / 2;
+
+    detections.forEach((det) => {
+      const bbox = det.bbox || [0, 0, 0, 0];
+      const origX1 = bbox[0] * scale - offsetX;
+      const origY1 = bbox[1] * scale - offsetY;
+      const origX2 = bbox[2] * scale - offsetX;
+      const origY2 = bbox[3] * scale - offsetY;
+
+      // Mirrored horizontal coordinates to match CSS transform: scaleX(-1) on video
+      const x1 = Math.max(0, cw - origX2);
+      const x2 = Math.min(cw, cw - origX1);
+      const y1 = Math.max(0, origY1);
+      const y2 = Math.min(ch, origY2);
+      const bw = Math.max(10, x2 - x1);
+      const bh = Math.max(10, y2 - y1);
+
+      const name = (det.name || "UNKNOWN").trim();
+      const isKnown = det.is_known || (name.toLowerCase() === "ashutosh" || name.toLowerCase() === "dhrunil");
+      const isLive = det.liveness ? det.liveness.is_live : true;
+      const sim = Math.round((det.similarity || 0) * 100);
+
+      let strokeColor = "#f59e0b"; // Apple Amber for UNKNOWN
+      let fillColor = "rgba(245, 158, 11, 0.12)";
+      let label = `UNKNOWN (${sim}%)`;
+
+      if (!isLive) {
+        strokeColor = "#f43f5e"; // Apple Coral for spoof
+        fillColor = "rgba(244, 63, 94, 0.12)";
+        label = "SPOOF SUSPECTED";
+      } else if (isKnown) {
+        strokeColor = "#10b981"; // Apple Emerald for Ashutosh/Dhrunil
+        fillColor = "rgba(16, 185, 129, 0.12)";
+        label = `${name} (${sim}%)`;
+      }
+
+      // Draw bounding box
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 2;
+      ctx.fillStyle = fillColor;
+
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(x1, y1, bw, bh, 8);
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        ctx.fillRect(x1, y1, bw, bh);
+        ctx.strokeRect(x1, y1, bw, bh);
+      }
+
+      // Draw 5 facial landmarks if present
+      if (det.landmarks && Array.isArray(det.landmarks)) {
+        ctx.fillStyle = strokeColor;
+        det.landmarks.forEach((pt) => {
+          const lmx = cw - (pt[0] * scale - offsetX);
+          const lmy = pt[1] * scale - offsetY;
+          ctx.beginPath();
+          ctx.arc(lmx, lmy, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      // Draw identity pill tag
+      ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif';
+      const textMetrics = ctx.measureText(label);
+      const tagW = textMetrics.width + 12;
+      const tagH = 18;
+      const tagX = Math.max(4, Math.min(cw - tagW - 4, x1));
+      const tagY = Math.max(20, y1 - 4);
+
+      ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(tagX, tagY - 14, tagW, tagH, 4);
+        ctx.fill();
+      } else {
+        ctx.fillRect(tagX, tagY - 14, tagW, tagH);
+      }
+
+      ctx.fillStyle = strokeColor;
+      ctx.fillText(label, tagX + 6, tagY);
+    });
+  }
+
   function startFaceIdLiveCheck(video) {
+    const faceidCanvas = document.getElementById("faceid-canvas");
+    if (faceidCanvas) {
+      faceidCanvas.width = 220;
+      faceidCanvas.height = 220;
+    }
+
     const offscreen = document.createElement("canvas");
     offscreen.width = 640;
     offscreen.height = 480;
     const offCtx = offscreen.getContext("2d");
 
     let isRequestInFlight = false;
-    let consecutiveUnknownCount = 0;
 
     setInterval(async () => {
       if (!faceIdState.isLocked || faceIdState.isAuthenticating || isRequestInFlight) return;
@@ -313,7 +419,7 @@
         offscreen.width = 640;
         offscreen.height = Math.round(640 * (vh / vw)) || 480;
         offCtx.drawImage(video, 0, 0, offscreen.width, offscreen.height);
-        const b64 = offscreen.toDataURL("image/jpeg", 0.82);
+        const b64 = offscreen.toDataURL("image/jpeg", 0.80);
 
         const resp = await fetch("/api/auth/login-by-face", {
           method: "POST",
@@ -322,23 +428,50 @@
         });
         const data = await resp.json();
 
+        const detections = data.detections || (data.detection ? [data.detection] : []);
+        renderFaceIdOverlay(faceidCanvas, detections);
+
+        const reticle = document.getElementById("faceid-reticle");
+        const statusText = document.getElementById("faceid-status-text");
+        const restrictedAlert = document.getElementById("faceid-restricted-alert");
+
         if (data.authenticated && data.success && data.user) {
-          consecutiveUnknownCount = 0;
-          startBiometricAuthenticationSequence(data.user.name.toLowerCase());
-        } else if (data.reason === "UNREGISTERED_USER") {
-          consecutiveUnknownCount++;
-          if (consecutiveUnknownCount >= 3) {
-            showFaceIdRestrictedWarning();
+          if (reticle) {
+            reticle.className = "faceid-reticle-ring verified";
+            reticle.style.borderColor = "";
           }
-        } else {
-          consecutiveUnknownCount = 0;
+          if (statusText) statusText.textContent = `Identity Verified: ${data.user.name}`;
+          if (restrictedAlert) restrictedAlert.classList.add("hidden");
+          startBiometricAuthenticationSequence(data.user.name.toLowerCase());
+        } else if (data.reason === "UNKNOWN_SUBJECT" || (detections.length > 0 && !data.authenticated)) {
+          // Live Unknown Subject detected: render amber reticle and inform user
+          if (reticle) {
+            reticle.className = "faceid-reticle-ring scanning";
+            reticle.style.borderColor = "#f59e0b";
+          }
+          const sim = detections[0] ? Math.round((detections[0].similarity || 0) * 100) : 0;
+          if (statusText) statusText.textContent = `Unregistered Subject (UNKNOWN: ${sim}%)`;
+          if (restrictedAlert) {
+            restrictedAlert.classList.remove("hidden");
+            const alertMsg = restrictedAlert.querySelector(".text-rose-800");
+            if (alertMsg) {
+              alertMsg.textContent = "Unregistered subject (UNKNOWN). Physiological vitals are calibrated for Ashutosh & Dhrunil. You can continue as Guest or authenticate.";
+            }
+          }
+        } else if (data.reason === "NO_FACE") {
+          if (reticle) {
+            reticle.className = "faceid-reticle-ring scanning";
+            reticle.style.borderColor = "";
+          }
+          if (statusText) statusText.textContent = "Position your face within the frame to authenticate";
+          if (restrictedAlert) restrictedAlert.classList.add("hidden");
         }
       } catch (e) {
         // Silently continue scanning
       } finally {
         isRequestInFlight = false;
       }
-    }, 1200);
+    }, 600);
   }
 
   function startBiometricAuthenticationSequence(personKey) {
@@ -496,19 +629,84 @@
       restrictedAlert.style.animation = "none";
       restrictedAlert.offsetHeight; // reflow
       restrictedAlert.style.animation = "";
+      const alertMsg = restrictedAlert.querySelector(".text-rose-800");
+      if (alertMsg) {
+        alertMsg.textContent = "Unregistered subject (UNKNOWN). Vital calculations are calibrated for Ashutosh & Dhrunil. You can continue as Guest or authenticate.";
+      }
     }
-    if (reticle) reticle.className = "faceid-reticle-ring restricted";
-    if (statusText) statusText.textContent = "Access Denied: Unregistered participant detected.";
+    if (reticle) {
+      reticle.className = "faceid-reticle-ring scanning";
+      reticle.style.borderColor = "#f59e0b";
+    }
+    if (statusText) statusText.textContent = "Unregistered Subject Detected (UNKNOWN)";
 
     state.vitals.isRestricted = true;
     refreshMetricCards();
   }
 
-  function unlockDashboardAsGuest() {
+  async function unlockDashboardAsGuest() {
     const modal = document.getElementById("faceid-modal");
     if (modal) modal.classList.add("authenticated");
     faceIdState.isLocked = false;
     faceIdState.isAuthenticating = false;
+    faceIdState.currentUser = {
+      name: "Guest Subject",
+      role: "Guest Mode (Calibrated for Ashutosh & Dhrunil)",
+      avatar: "GU",
+      participantId: null,
+      department: "Unregistered Guest",
+    };
+    state.vitals.isRestricted = true;
+
+    try {
+      await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Guest" }),
+      });
+    } catch (e) {
+      console.warn("Guest auth login sync failed:", e);
+    }
+
+    if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+      state.ws.send(JSON.stringify({ command: "login", name: "Guest" }));
+    }
+
+    // Update Top Bar Personalized Header
+    const hdrAvatar = document.getElementById("header-user-avatar");
+    const hdrName = document.getElementById("header-user-name");
+    const hdrRole = document.getElementById("header-user-role");
+
+    if (hdrAvatar) {
+      hdrAvatar.textContent = "GU";
+      hdrAvatar.className = "w-7 h-7 rounded-full bg-slate-600/20 border border-slate-500/30 flex items-center justify-center font-bold text-slate-700 text-xs";
+    }
+    if (hdrName) hdrName.textContent = "Guest Subject";
+    if (hdrRole) hdrRole.textContent = "Guest Mode (Calibrated for Ashutosh & Dhrunil)";
+
+    // Update Sidebar Active Subject
+    const subjAvatar = document.getElementById("subject-avatar");
+    const subjName = document.getElementById("subject-name");
+    const sessBadge = document.getElementById("session-badge");
+
+    if (subjAvatar) {
+      subjAvatar.textContent = "GU";
+      subjAvatar.className = "w-8 h-8 rounded-full bg-slate-600/20 border border-slate-500/30 flex items-center justify-center font-bold text-slate-700 text-xs";
+    }
+    if (subjName) subjName.textContent = "Guest Subject";
+    if (sessBadge) {
+      sessBadge.textContent = "GUEST";
+      sessBadge.className = "px-2 py-0.5 rounded-full text-[9px] font-mono bg-amber-950/60 text-amber-400 border border-amber-800/40";
+    }
+
+    updateIdentityPanel({
+      name: "UNKNOWN / GUEST",
+      similarity: 0,
+      trackId: 100,
+      isLive: true,
+      blink: true,
+    });
+    refreshMetricCards();
   }
 
   async function performLogout() {
@@ -1338,17 +1536,36 @@
   function renderFaceDetections(ctx, w, h, detections) {
     ctx.clearRect(0, 0, w, h);
 
+    const faceCountTag = document.getElementById("face-count-tag");
+    const accessBadge = document.getElementById("subject-access-badge");
+
     if (!detections || detections.length === 0) {
-      document.getElementById("face-count-tag").textContent = "No Face Detected";
+      if (faceCountTag) faceCountTag.textContent = "No Face Detected";
       return;
     }
 
-    document.getElementById("face-count-tag").textContent = `${detections.length} Face Detected`;
+    if (faceCountTag) faceCountTag.textContent = `${detections.length} Face Detected`;
 
     detections.forEach((det) => {
-      const [x1, y1, x2, y2] = det.bbox;
-      const isKnown = det.is_known;
+      const scaleX = w / 640;
+      const scaleY = h / 480;
+      const origX1 = (det.bbox ? det.bbox[0] : 0) * scaleX;
+      const origY1 = (det.bbox ? det.bbox[1] : 0) * scaleY;
+      const origX2 = (det.bbox ? det.bbox[2] : 0) * scaleX;
+      const origY2 = (det.bbox ? det.bbox[3] : 0) * scaleY;
+
+      // Mirrored horizontal coordinates to match CSS transform: scaleX(-1) on video
+      const x1 = Math.max(0, w - origX2);
+      const x2 = Math.min(w, w - origX1);
+      const y1 = Math.max(0, origY1);
+      const y2 = Math.min(h, origY2);
+      const bw = Math.max(10, x2 - x1);
+      const bh = Math.max(10, y2 - y1);
+
+      const name = (det.name || "UNKNOWN").trim();
+      const isKnown = det.is_known || (name.toLowerCase() === "ashutosh" || name.toLowerCase() === "dhrunil");
       const isLive = det.liveness ? det.liveness.is_live : true;
+      const score = Math.round((det.similarity || 0) * 100);
 
       // Apple clean colors: Forest emerald for known live, Amber for unknown, Coral for spoof
       let strokeColor = "#10b981"; // Apple emerald
@@ -1361,27 +1578,60 @@
       ctx.shadowBlur = 0;
       if (ctx.roundRect) {
         ctx.beginPath();
-        ctx.roundRect(x1, y1, x2 - x1, y2 - y1, 12);
+        ctx.roundRect(x1, y1, bw, bh, 12);
         ctx.stroke();
       } else {
-        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        ctx.strokeRect(x1, y1, bw, bh);
+      }
+
+      // Draw 5 facial landmark points
+      if (det.landmarks && Array.isArray(det.landmarks)) {
+        ctx.fillStyle = strokeColor;
+        det.landmarks.forEach((pt) => {
+          const lmx = w - (pt[0] * scaleX);
+          const lmy = pt[1] * scaleY;
+          ctx.beginPath();
+          ctx.arc(lmx, lmy, 3, 0, Math.PI * 2);
+          ctx.fill();
+        });
       }
 
       // Name & Confidence Badge
-      const name = det.name || "UNKNOWN";
-      const score = Math.round((det.similarity || 0.92) * 100);
-      const tagText = `${name} (${score}%)`;
+      const tagText = isKnown ? `${name} (${score}%)` : `UNKNOWN (${score}%)`;
+
+      ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif';
+      const textWidth = ctx.measureText(tagText).width;
+      const tagW = textWidth + 16;
+      const tagH = 22;
+      const tagX = Math.max(8, Math.min(w - tagW - 8, x1));
+      const tagY = Math.max(26, y1);
 
       ctx.fillStyle = "rgba(17, 24, 39, 0.88)";
-      ctx.fillRect(x1, y1 - 24, ctx.measureText(tagText).width + 16, 22);
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(tagX, tagY - 24, tagW, tagH, 6);
+        ctx.fill();
+      } else {
+        ctx.fillRect(tagX, tagY - 24, tagW, tagH);
+      }
 
       ctx.fillStyle = strokeColor;
-      ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif';
-      ctx.fillText(tagText, x1 + 8, y1 - 8);
+      ctx.fillText(tagText, tagX + 8, tagY - 8);
+
+      // Update Access Badge
+      if (accessBadge) {
+        if (isKnown) {
+          accessBadge.textContent = "VERIFIED ENROLLED";
+          accessBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold";
+        } else {
+          accessBadge.textContent = "UNREGISTERED";
+          accessBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-amber-50 text-amber-700 border border-amber-200 font-semibold";
+        }
+      }
 
       // Update Identity HUD Panel
       updateIdentityPanel({
-        name: det.name || "Subject",
+        name: isKnown ? name : "UNKNOWN",
         similarity: score,
         trackId: det.track_id || 101,
         isLive: isLive,
