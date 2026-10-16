@@ -48,7 +48,7 @@ class ECGProcessor:
         return filtered
 
     def detect_r_peaks(
-        self, filtered_ecg: Optional[np.ndarray], min_distance_ms: float = 250.0
+        self, filtered_ecg: Optional[np.ndarray], min_distance_ms: float = 300.0
     ) -> np.ndarray:
         """
         Detects R-peaks using derivative, squaring, and moving-average integration (Pan-Tompkins heuristic).

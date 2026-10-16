@@ -1039,20 +1039,29 @@
 
   let lastRawEcg = null;
   let ecgDcBaseline = 512.0;
+  let ecgSmoothBuf = [];
 
   function feedSampleToScopes(s) {
     const rawVal = s.ecg_raw !== undefined ? s.ecg_raw : (s.ecg !== undefined ? s.ecg * 120.0 + 512.0 : 512.0);
 
-    // 50 Hz powerline notch filter for 100 Hz sampling rate: y[n] = 0.5 * (x[n] + x[n-1])
+    // 1. 50 Hz powerline notch filter for 100 Hz sampling rate: y[n] = 0.5 * (x[n] + x[n-1])
     let notchedRaw = rawVal;
     if (lastRawEcg !== null) {
       notchedRaw = 0.5 * (rawVal + lastRawEcg);
     }
     lastRawEcg = rawVal;
 
-    // Remove slow DC offset / baseline wander
-    ecgDcBaseline = 0.98 * ecgDcBaseline + 0.02 * notchedRaw;
-    const centeredEcg = notchedRaw - ecgDcBaseline;
+    // 2. High-frequency EMG muscle tremor smoothing (3-point weighted FIR low-pass filter)
+    let smoothedEcg = notchedRaw;
+    if (ecgSmoothBuf.length === 2) {
+      smoothedEcg = 0.25 * notchedRaw + 0.5 * ecgSmoothBuf[1] + 0.25 * ecgSmoothBuf[0];
+    }
+    ecgSmoothBuf.push(notchedRaw);
+    if (ecgSmoothBuf.length > 2) ecgSmoothBuf.shift();
+
+    // 3. Clinical 0.1 Hz baseline wander tracking (stabilizes baseline without dome distortion)
+    ecgDcBaseline = 0.995 * ecgDcBaseline + 0.005 * smoothedEcg;
+    const centeredEcg = smoothedEcg - ecgDcBaseline;
 
     const ecgVal = s.ecg !== undefined ? s.ecg : (centeredEcg / 120.0);
     const ppgRedVal = s.ppg_red_norm !== undefined ? s.ppg_red_norm : ((s.ppg_red || 20000) - 20000) / 4000.0;
