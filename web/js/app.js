@@ -2048,45 +2048,7 @@
       // offline fallback
     }
 
-    // Seed sample sessions if still empty
-    if (state.sessions.length === 0) {
-      state.sessions = [
-        {
-          id: "sess_k9f12a",
-          name: "Dr. Alex Mercer",
-          isGuest: false,
-          startTime: "2026-10-13 18:45:10",
-          duration: "00:24:15",
-          durationSec: 1455,
-          avgHr: 71,
-          avgSpo2: 98.6,
-          status: "COMPLETED",
-        },
-        {
-          id: "sess_8m201x",
-          name: "Sarah Jenkins",
-          isGuest: false,
-          startTime: "2026-10-13 16:12:04",
-          duration: "00:15:30",
-          durationSec: 930,
-          avgHr: 76,
-          avgSpo2: 97.9,
-          status: "COMPLETED",
-        },
-        {
-          id: "sess_g319cc",
-          name: "Guest Participant",
-          isGuest: true,
-          startTime: "2026-10-13 14:02:22",
-          duration: "00:08:42",
-          durationSec: 522,
-          avgHr: 68,
-          avgSpo2: 98.8,
-          status: "COMPLETED",
-        },
-      ];
-    }
-
+    // Initial render of historical sessions
     renderHistoryTable();
 
     // Search filter
@@ -2100,7 +2062,51 @@
     // Refresh button
     const btnRefresh = document.getElementById("btn-refresh-history");
     if (btnRefresh) {
-      btnRefresh.addEventListener("click", () => renderHistoryTable());
+      btnRefresh.addEventListener("click", async () => {
+        try {
+          const res = await fetch("/api/sessions");
+          if (res.ok) {
+            const data = await res.json();
+            if (data.sessions) {
+              state.sessions = data.sessions.map((s) => ({
+                id: s.session_id,
+                name: s.participant_name || (s.is_guest ? "Guest Participant" : "Enrolled Subject"),
+                isGuest: !!s.is_guest,
+                startTime: s.start_time,
+                duration: formatDuration(Math.round(s.duration_seconds || 60)),
+                durationSec: s.duration_seconds || 60,
+                avgHr: s.summary ? (s.summary.mean_ecg_hr || 72) : 72,
+                avgSpo2: s.summary ? (s.summary.mean_spo2 || 98.4) : 98.4,
+                status: s.status || "COMPLETED",
+              }));
+            }
+          }
+        } catch (e) {}
+        renderHistoryTable();
+      });
+    }
+
+    // Purge All Test Data button
+    const btnPurge = document.getElementById("btn-purge-history");
+    if (btnPurge) {
+      btnPurge.addEventListener("click", async () => {
+        if (!confirm("Are you sure you want to purge all test and duplicate sessions? This will permanently delete all recorded timeseries/metrics while keeping Ashutosh & Dhrunil profiles intact.")) {
+          return;
+        }
+        try {
+          const res = await fetch("/api/sessions/purge-all", { method: "POST" });
+          const data = await res.json();
+          if (res.ok) {
+            state.sessions = [];
+            renderHistoryTable();
+            alert("All test & duplicate data purged cleanly from database.");
+          } else {
+            alert("Failed to purge data: " + (data.detail || "Server error"));
+          }
+        } catch (err) {
+          alert("Error purging data: " + err.message);
+        }
+      });
     }
 
     // Export CSV Handlers
@@ -2159,11 +2165,14 @@
           </span>
         </td>
         <td class="p-3.5 text-right space-x-1.5">
-          <button class="airbnb-btn airbnb-btn-secondary py-1 px-3 text-[11px]" onclick="window.loadSessionReport('${s.id}')">
+          <button class="airbnb-btn airbnb-btn-secondary py-1 px-2.5 text-[11px]" onclick="window.loadSessionReport('${s.id}')" title="View Full Report">
             Report
           </button>
-          <button class="airbnb-btn airbnb-btn-secondary py-1 px-3 text-[11px]" onclick="window.exportSessionCSV('${s.id}')">
+          <button class="airbnb-btn airbnb-btn-secondary py-1 px-2.5 text-[11px]" onclick="window.exportSessionCSV('${s.id}')" title="Download Raw CSV">
             CSV
+          </button>
+          <button class="airbnb-btn bg-[#FFF1F2] hover:bg-[#FFE4E6] text-[#BE123C] border border-[#FECDD3] py-1 px-2.5 text-[11px] font-semibold transition-colors" onclick="window.deleteSession('${s.id}')" title="Delete Session Permanently">
+            Delete
           </button>
         </td>
       `;
@@ -2188,6 +2197,24 @@
 
   window.exportSessionCSV = (sessionId) => {
     exportRawTelemetryCSV(sessionId);
+  };
+
+  window.deleteSession = async (sessionId) => {
+    if (!confirm(`Are you sure you want to permanently delete session "${sessionId}" and its recorded data?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (res.ok) {
+        state.sessions = state.sessions.filter((s) => s.id !== sessionId);
+        renderHistoryTable();
+      } else {
+        alert("Failed to delete session: " + (data.detail || "Server error"));
+      }
+    } catch (e) {
+      alert("Error deleting session: " + e.message);
+    }
   };
 
   async function exportRawTelemetryCSV(sessionId) {

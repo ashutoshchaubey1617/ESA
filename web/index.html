@@ -1067,8 +1067,11 @@
 
           <div class="flex items-center space-x-3">
             <input type="text" id="history-search" placeholder="Search by name or Session ID..." class="px-3.5 py-2 rounded-xl bg-[#FAF9F5] border border-[#DDD8CC] text-xs text-[#18181B] focus:outline-none focus:border-[#18181B] w-64 font-medium">
-            <button id="btn-refresh-history" class="warm-btn warm-btn-secondary py-2 px-3.5 text-xs">
+            <button id="btn-refresh-history" class="warm-btn warm-btn-secondary py-2 px-3.5 text-xs flex items-center gap-1.5" title="Refresh list from database">
               <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+            </button>
+            <button id="btn-purge-history" class="warm-btn bg-[#FFF1F2] hover:bg-[#FFE4E6] text-[#BE123C] border border-[#FECDD3] py-2 px-3.5 text-xs font-semibold flex items-center gap-1.5 transition-colors" title="Purge all test/duplicate session data">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Purge Test Data
             </button>
           </div>
         </div>

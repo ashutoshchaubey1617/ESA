@@ -334,12 +334,9 @@ async def telemetry_broadcaster_loop():
                     new_samples = samples[-10:]
                 else:
                     new_samples = [s for s in samples if s[1] > last_seq or (s[1] < last_seq and (last_seq - s[1]) > 50000)]
-                    if not new_samples and len(samples) > 0:
-                        # Fallback if seq wrapped or uninitialized
-                        new_samples = samples[-2:]
 
-                if samples:
-                    last_seq = samples[-1][1]
+                if new_samples:
+                    last_seq = new_samples[-1][1]
 
             # 2. Persist raw samples if session is active
             if state.active_session_id and new_samples:
@@ -1171,6 +1168,27 @@ def delete_session_by_query(
     return delete_session_by_path(target_id)
 
 
+@app.post("/api/sessions/purge-all")
+def purge_all_sessions():
+    """
+    Purges all historical sessions, sensor timeseries, and computed metrics.
+    Retains canonical enrolled participants (Ashutosh & Dhrunil) and vacuums the database.
+    """
+    if state.active_session_id:
+        state.active_session_id = None
+        state.active_participant_id = None
+        state.is_guest_session = False
+        state.session_start_time = None
+
+    stats = state.db.purge_all_sessions()
+    logger.info(f"Purged all historical sessions: {stats}")
+    return {
+        "success": True,
+        "purged": stats,
+        "message": f"Purged {stats.get('sessions_deleted', 0)} sessions and reclaimed database storage."
+    }
+
+
 # ============================================================================
 # 5. DATA EXPORT & REPORTS API
 # ============================================================================
@@ -1222,6 +1240,7 @@ def get_serial_settings():
         "mock_mode": state.serial_mgr.mock_mode,
         "connection_status": state.serial_mgr.connection_status,
         "last_error": state.serial_mgr.last_error,
+        "last_raw_line": state.serial_mgr.last_raw_line,
         "dropped_packets": state.serial_mgr.dropped_packets,
         "sim_heart_rate": state.serial_mgr._sim_heart_rate,
         "sim_leads_off": state.serial_mgr._sim_leads_off,

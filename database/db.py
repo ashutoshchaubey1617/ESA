@@ -343,6 +343,27 @@ class DatabaseManager:
             conn.close()
             return deleted
 
+    def purge_all_sessions(self) -> Dict[str, int]:
+        """Purges all sessions, sensor timeseries, and metrics while preserving canonical enrolled participants."""
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM sensor_timeseries")
+            ts_deleted = cursor.rowcount
+            cursor.execute("DELETE FROM physiological_metrics")
+            pm_deleted = cursor.rowcount
+            cursor.execute("DELETE FROM sessions")
+            sess_deleted = cursor.rowcount
+            cursor.execute("DELETE FROM sqlite_sequence WHERE name IN ('sensor_timeseries', 'physiological_metrics', 'sessions')")
+            conn.commit()
+            cursor.execute("VACUUM")
+            conn.close()
+            return {
+                "sessions_deleted": sess_deleted,
+                "timeseries_deleted": ts_deleted,
+                "metrics_deleted": pm_deleted,
+            }
+
     # Timeseries & Metrics Persistence
     def insert_sensor_samples(self, samples: List[Tuple[str, int, int, int, int, int, int]]):
         """Batch insert raw sensor telemetry."""

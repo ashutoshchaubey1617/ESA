@@ -53,6 +53,9 @@ bool is_max30100 = false;
 
 bool init_max30102() {
   Wire.begin();
+  #if defined(WIRE_HAS_TIMEOUT)
+  Wire.setWireTimeout(3000, true); // 3ms timeout, reset bus on timeout to prevent hanging on loose wires
+  #endif
   Wire.setClock(100000); // 100kHz Standard I2C mode (reliable on jumper wires)
 
   // Step 1: Probe I2C address 0x57
@@ -160,6 +163,7 @@ void setup() {
   // Initialize Serial
   Serial.begin(115200);
   while (!Serial && millis() < 2000);
+  Serial.println(F("STATUS,BOOT,AD8232_READY"));
 
   // Configure AD8232 Pins
   pinMode(PIN_ECG_ANALOG, INPUT);

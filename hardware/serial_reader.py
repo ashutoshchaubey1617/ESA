@@ -45,6 +45,7 @@ class SerialManager:
 
         self.connection_status = "DISCONNECTED"  # DISCONNECTED, CONNECTED, SIMULATING, ERROR
         self.last_error = ""
+        self.last_raw_line = ""
         self.dropped_packets = 0
         self.last_seq = -1
 
@@ -209,14 +210,28 @@ class SerialManager:
                 except Exception:
                     pass
 
+                last_start_cmd_time = time.time()
                 while self._running and self._serial and self._serial.is_open:
                     raw_line = self._serial.readline()
                     if not raw_line:
+                        # Auto-wake Arduino if it recently booted or reset
+                        if time.time() - last_start_cmd_time > 2.0:
+                            try:
+                                self._serial.write(b"START\n")
+                                self._serial.flush()
+                            except Exception:
+                                pass
+                            last_start_cmd_time = time.time()
                         continue
+
+                    last_start_cmd_time = time.time()
                     try:
-                        line = raw_line.decode("ascii", errors="replace")
+                        line = raw_line.decode("ascii", errors="replace").strip()
                     except Exception:
                         continue
+
+                    if line:
+                        self.last_raw_line = line
 
                     parsed = self._parse_line(line)
                     if parsed:
@@ -236,7 +251,13 @@ class SerialManager:
             except Exception as e:
                 self.connection_status = "ERROR"
                 self.last_error = str(e)
-                time.sleep(1.0)
+                if self._serial:
+                    try:
+                        self._serial.close()
+                    except Exception:
+                        pass
+                    self._serial = None
+                time.sleep(2.0)
 
     def _mock_worker(self):
         """
